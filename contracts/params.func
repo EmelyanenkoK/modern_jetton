@@ -1,0 +1,12 @@
+#include "error-codes.func";
+
+const int workchain = 0;
+
+int is_resolvable?(slice addr) inline {
+    (int wc, _) = parse_std_addr(addr);
+    return wc == workchain;
+}
+
+() force_chain(slice addr) impure {
+  throw_unless(error::wrong_workchain, is_resolvable?(addr));
+}

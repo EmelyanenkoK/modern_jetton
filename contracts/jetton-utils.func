@@ -1,0 +1,42 @@
+#include "params.func";
+const int ONE_TON = 100;
+
+cell pack_jetton_wallet_data (int balance, slice owner, slice jetton_master, cell token_wallet_code) inline {
+    return  begin_cell()
+            .store_grams(balance)
+            .store_slice(owner)
+            .store_slice(jetton_master)
+            .store_ref(token_wallet_code)
+            .end_cell();
+}
+{-
+    _ split_depth:(Maybe (## 5)) special:(Maybe TickTock)
+      code:(Maybe ^Cell) data:(Maybe ^Cell)
+      library:(HashmapE 256 SimpleLib) = StateInit;
+-}
+cell calculate_jetton_wallet_state_init (slice owner, slice jetton_master, cell code) inline {
+    return begin_cell()
+            .store_uint(0,1 + 1) ;; split_depth (Maybe = 0) and special (Maybe = 0)
+            .store_maybe_ref(code)
+            .store_maybe_ref(pack_jetton_wallet_data(0, owner, jetton_master, code))
+            .store_uint(0,1) ;; libraries - empty cell
+            .end_cell();
+}
+
+{-
+  addr_std$10 anycast:(Maybe Anycast)
+   workchain_id:int8 address:bits256  = MsgAddressInt;
+-}
+slice calc_address(cell state_init) inline {
+    return begin_cell().store_uint(4, 3) ;; 0x100 : $10 + anycast (Maybe = 0)
+            .store_int(workchain, 8)
+            .store_uint(
+                    cell_hash(state_init), 256)
+            .end_cell()
+            .begin_parse();
+}
+
+(slice) calc_user_wallet (slice owner, slice jetton_master, cell code) inline {
+    return calc_address(calculate_jetton_wallet_state_init(owner, jetton_master, code));
+}
+

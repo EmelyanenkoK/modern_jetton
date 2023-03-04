@@ -1,0 +1,20 @@
+const int error::unknown_op = 0xffff;
+const int error::wrong_workchain = 333;
+
+
+;; jetton wallet errors
+const int error::unauthorized_transfer = 705;
+const int error::not_enough_jettons = 706;
+const int error::unauthorized_incoming_transfer = 707;
+const int error::malformed_forward_payload = 708;
+const int error::not_enough_tons = 709;
+const int error::burn_fee_not_matched = 707;
+const int error::unknown_action = 0xFFFF;
+const int error::unknown_action_bounced = 0xFFF0;
+
+;; jetton minter errors
+const int error::discovery_fee_not_matched = 75;
+const int error::unauthorized_mint_request = 73;
+const int error::unauthorized_burn_request = 74;
+const int error::unauthorized_change_admin_request = 76;
+const int error::unauthorized_change_content_request = 77;

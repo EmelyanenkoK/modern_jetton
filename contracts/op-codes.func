@@ -1,0 +1,22 @@
+const int op::transfer = 0xf8a7ea5;
+const int op::transfer_notification = 0x7362d09c;
+const int op::internal_transfer = 0x178d4519;
+const int op::excesses = 0xd53276db;
+const int op::burn = 0x595f07bc;
+const int op::burn_notification = 0x7bdd97de;
+const int op::withdraw_tons = 0x6d8e5e3c;
+const int op::withdraw_jettons = 0x768a50b2;
+
+const int op::provide_wallet_address = 0x2c76b973;
+const int op::take_wallet_address = 0xd1735400;
+
+;; Minter
+const int op::mint = 0x1674b0a0;
+const int op::change_admin = 0x4840664f;
+const int op::change_content = 0x5773d1f5;
+
+(slice, (int)) ~load_op(slice s) inline { return s.load_uint(32); }
+(slice, (int)) ~load_query_id(slice s) inline { return s.load_uint(64); }
+builder store_op(builder b, int op) inline { return b.store_uint(op, 32); }
+builder store_query_id(builder b, int query_id) inline { return b.store_uint(query_id, 64); }
+
