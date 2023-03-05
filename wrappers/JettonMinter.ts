@@ -54,11 +54,11 @@ export class JettonMinter implements Contract {
                .endCell();
     }
 
-    async sendDiscovery(provider: ContractProvider, via: Sender, owner: Address, include_address: boolean) {
+    async sendDiscovery(provider: ContractProvider, via: Sender, owner: Address, include_address: boolean, value:bigint = toNano('0.1')) {
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: JettonMinter.discoveryMessage(owner, include_address),
-            value: toNano("0.1"),
+            value: value,
         });
     }
 
