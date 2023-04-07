@@ -16,9 +16,7 @@ const urlPrompt = 'Please specify url pointing to jetton metadata(json):';
 export async function run(provider: NetworkProvider) {
     const ui       = provider.ui();
     const sender   = provider.sender();
-    if(sender.address === undefined)
-        throw("Can't get sender address");
-    const adminPrompt = `Please specify admin address(${sender.address} as default)`;
+    const adminPrompt = `Please specify admin address`;
     ui.write(`Jetton deployer\nCurrent deployer onli supports off-chain format:${formatUrl}`);
 
     let admin      = await promptAddress(adminPrompt, ui, sender.address);
