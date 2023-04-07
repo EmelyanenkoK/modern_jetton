@@ -17,7 +17,7 @@ export const promptBool    = async (prompt:string, options:[string, string], ui:
 }
 
 export const promptAddress = async (prompt:string, provider:UIProvider, fallback?:Address) => {
-    let promptFinal = fallback ? prompt + `(default:${fallback}):` : prompt ;
+    let promptFinal = fallback ? prompt.replace(/:$/,'') + `(default:${fallback}):` : prompt ;
     do {
         let testAddr = (await provider.input(promptFinal)).replace(/^\s+|\s+$/g,'');
         try{
