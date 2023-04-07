@@ -74,7 +74,7 @@ const mintAction = async (provider:NetworkProvider, ui:UIProvider) => {
     do {
         retry = false;
         const fallbackAddr = sender.address ?? await minterContract.getAdminAddress();
-        mintAddress = await promptAddress(`Please specify address to mint to(default:${fallbackAddr}):`, ui, sender.address);
+        mintAddress = await promptAddress(`Please specify address to mint to`, ui, fallbackAddr);
         mintAmount  = await promptAmount('Please provide mint amount in decimal form:', ui);
         ui.write(`Mint ${mintAmount} tokens to ${mintAddress}\n`);
         retry = !(await promptBool('Is it ok?(yes/no)', ['yes', 'no'], ui));
