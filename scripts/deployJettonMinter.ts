@@ -5,11 +5,11 @@ import { promptAddress, promptBool, promptUrl } from '../wrappers/ui-utils';
 
 const formatUrl = "https://github.com/ton-blockchain/TEPs/blob/master/text/0064-token-data-standard.md#jetton-metadata-example-offchain";
 const exampleContent = {
-                          "name": "TON DAO",
-                          "description": "Sample of TON DAO Jetton",
-                          "symbol": "VOTE",
+                          "name": "Sample Jetton",
+                          "description": "Sample of Jetton",
+                          "symbol": "JTN",
                           "decimals": 0,
-                          "image": "https://www.svgrepo.com/show/108295/vote.svg"
+                          "image": "https://www.svgrepo.com/download/483336/coin-vector.svg"
                        };
 const urlPrompt = 'Please specify url pointing to jetton metadata(json):';
 
