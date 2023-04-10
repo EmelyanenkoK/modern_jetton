@@ -1,5 +1,9 @@
 import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Sender, SendMode, toNano } from 'ton-core';
 
+export type JettonMinterContent = {
+    type:0|1,
+    uri:string
+};
 export type JettonMinterConfig = {admin: Address; content: Cell; wallet_code: Cell};
 
 export function jettonMinterConfigToCell(config: JettonMinterConfig): Cell {
@@ -8,6 +12,13 @@ export function jettonMinterConfigToCell(config: JettonMinterConfig): Cell {
                       .storeAddress(config.admin)
                       .storeRef(config.content)
                       .storeRef(config.wallet_code)
+           .endCell();
+}
+
+export function jettonContentToCell(content:JettonMinterContent) {
+    return beginCell()
+                      .storeUint(content.type, 8)
+                      .storeStringTail(content.uri) //Snake logic under the hood
            .endCell();
 }
 
@@ -54,11 +65,11 @@ export class JettonMinter implements Contract {
                .endCell();
     }
 
-    async sendDiscovery(provider: ContractProvider, via: Sender, owner: Address, include_address: boolean) {
+    async sendDiscovery(provider: ContractProvider, via: Sender, owner: Address, include_address: boolean, value:bigint = toNano('0.1')) {
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: JettonMinter.discoveryMessage(owner, include_address),
-            value: toNano("0.1"),
+            value: value,
         });
     }
 
