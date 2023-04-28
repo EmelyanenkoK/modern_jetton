@@ -498,11 +498,12 @@ describe('JettonWallet', () => {
         });
         expect(await deployerJettonWallet.getJettonBalance()).toEqual(0n);
         expect(await jettonMinter.getTotalSupply()).toEqual(initialTotalSupply - initialJettonBalance);
-
-        await blockchain.loadFrom(justStartedDistributionSnapshot); // restore state
     });
 
     it('not wallet owner should not be able to burn jettons', async () => {
+        await blockchain.loadFrom(justStartedDistributionSnapshot);
+        deployer = await blockchain.treasury('deployer');
+
         const deployerJettonWallet = await userWallet(deployer.address);
         let initialJettonBalance = await deployerJettonWallet.getJettonBalance();
         let initialTotalSupply = await jettonMinter.getTotalSupply();
@@ -516,18 +517,17 @@ describe('JettonWallet', () => {
           });
         expect(await deployerJettonWallet.getJettonBalance()).toEqual(initialJettonBalance);
         expect(await jettonMinter.getTotalSupply()).toEqual(initialTotalSupply);
-
-        await blockchain.loadFrom(justStartedDistributionSnapshot);
     });
 
     it('wallet owner can not burn more or less jettons than it has', async () => {
+        await blockchain.loadFrom(justStartedDistributionSnapshot);
+        deployer = await blockchain.treasury('deployer');
+
         const deployerJettonWallet = await userWallet(deployer.address);
         let initialJettonBalance = await deployerJettonWallet.getJettonBalance();
         let initialTotalSupply = await jettonMinter.getTotalSupply();
         let burnAmount1 = initialJettonBalance + 1n;
         let burnAmount2 = initialJettonBalance - 1n;
-        // console.log(deployer.seqno);
-        // deployer.seqno--;
         const sendResult1 = await deployerJettonWallet.sendBurn(deployer.getSender(), toNano('0.1'), // ton amount
                                 burnAmount1, deployer.address, null); // amount, response address, custom payload
         const sendResult2 = await deployerJettonWallet.sendBurn(deployer.getSender(), toNano('0.1'),
@@ -541,39 +541,7 @@ describe('JettonWallet', () => {
             });
         expect(await deployerJettonWallet.getJettonBalance()).toEqual(initialJettonBalance);
         expect(await jettonMinter.getTotalSupply()).toEqual(initialTotalSupply);
-
-        await blockchain.loadFrom(justStartedDistributionSnapshot);
     });
-
-    // it('minimal burn message fee', async () => {
-    //    const deployerJettonWallet = await userWallet(deployer.address);
-    //    let initialJettonBalance   = await deployerJettonWallet.getJettonBalance();
-    //    let initialTotalSupply     = await jettonMinter.getTotalSupply();
-    //    let fwd_fee      = 1492012n /*1500012n*/, gas_consumption = 14000000n;
-    //    let minimalFee   = fwd_fee + 2n*gas_consumption;
-
-    //    const sendLow    = await deployerJettonWallet.sendBurn(deployer.getSender(), minimalFee, // ton amount
-    //                         initialJettonBalance, deployer.address, null); // amount, response address, custom payload
-
-    //    expect(sendLow.transactions).toHaveTransaction({
-    //             from: deployer.address,
-    //             to: deployerJettonWallet.address,
-    //             aborted: true,
-    //             exitCode: 710, // error::burn_fee_not_matched
-    //          });
-
-    //     const sendExcess = await deployerJettonWallet.sendBurn(deployer.getSender(), minimalFee + 1n,
-    //                                                                   initialJettonBalance, deployer.address, null);
-
-    //     expect(sendExcess.transactions).toHaveTransaction({
-    //         from: deployer.address,
-    //         to: deployerJettonWallet.address,
-    //         success: true
-    //     });
-
-    //     expect(await deployerJettonWallet.getJettonBalance()).toEqual(0);
-    //     expect(await jettonMinter.getTotalSupply()).toEqual(initialTotalSupply - initialJettonBalance);
-    // });
 
     //it('minter should only accept burn messages from jetton wallets', async () => {
     //    const deployerJettonWallet = await userWallet(deployer.address);
