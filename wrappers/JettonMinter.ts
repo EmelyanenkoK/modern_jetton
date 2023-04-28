@@ -4,12 +4,26 @@ export type JettonMinterContent = {
     type:0|1,
     uri:string
 };
-export type JettonMinterConfig = {admin: Address; content: Cell; wallet_code: Cell};
+export type JettonMinterConfig = {
+    admin: Address
+    consigliere: Address
+    content: Cell
+    wallet_code: Cell
+};
+
+export type Distribution = {
+    active: boolean
+    isJetton: boolean
+    volume: bigint
+    myJettonWallet?: Address
+}
 
 export function jettonMinterConfigToCell(config: JettonMinterConfig): Cell {
     return beginCell()
                       .storeCoins(0)
                       .storeAddress(config.admin)
+                      .storeAddress(config.consigliere)
+                      .storeMaybeRef(null) // no dsitribution data on init
                       .storeRef(config.content)
                       .storeRef(config.wallet_code)
            .endCell();
@@ -20,6 +34,17 @@ export function jettonContentToCell(content:JettonMinterContent) {
                       .storeUint(content.type, 8)
                       .storeStringTail(content.uri) //Snake logic under the hood
            .endCell();
+}
+
+export function packDistribution(distribution: Distribution) {
+    const c = beginCell()
+        .storeBit(distribution.active)
+        .storeBit(distribution.isJetton)
+        .storeCoins(distribution.volume)
+    if (distribution.isJetton) {
+        c.storeAddress(distribution.myJettonWallet!)
+    }
+    return c.endCell();
 }
 
 export class JettonMinter implements Contract {
@@ -35,11 +60,18 @@ export class JettonMinter implements Contract {
         return new JettonMinter(contractAddress(workchain, init), init);
     }
 
-    async sendDeploy(provider: ContractProvider, via: Sender, value: bigint) {
+    async sendDeploy(provider: ContractProvider, via: Sender, distribution: Distribution, value: bigint) {
+        if (distribution.active) {
+            throw new Error('Distribution should be not active');
+        }
+        const distributionCell = packDistribution(distribution);
         await provider.internal(via, {
             value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: beginCell().endCell(),
+            body: beginCell()
+                    .storeUint(0xf5aa8943, 32).storeUint(0, 64) // op init
+                    .storeRef(distributionCell)
+                  .endCell(),
         });
     }
 
@@ -99,6 +131,17 @@ export class JettonMinter implements Contract {
             value: toNano("0.1"),
         });
     }
+
+    async sendStartDistribution(provider: ContractProvider, via: Sender, value: bigint) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: beginCell().storeUint(0x1140a64f, 32).storeUint(0, 64) // op, queryId
+                                .endCell()
+        });
+    }
+
+
     async getWalletAddress(provider: ContractProvider, owner: Address): Promise<Address> {
         const res = await provider.get('get_wallet_address', [{ type: 'slice', cell: beginCell().storeAddress(owner).endCell() }])
         return res.stack.readAddress()
@@ -131,5 +174,23 @@ export class JettonMinter implements Contract {
     async getContent(provider: ContractProvider) {
         let res = await this.getJettonData(provider);
         return res.content;
+    }
+
+    // distrib_data$_ started: (## 1)
+    //   distributing_jettons: (## 1)
+    //   volume: Coins
+    //   my_jetton_wallet: distributing_jettons? MsgAddress
+    //   = Distribution;
+    async getDistribution(provider: ContractProvider): Promise<Distribution> {
+        let res = await provider.get('get_distribution_data', []);
+        let distribution = res.stack.readCell().beginParse();
+        let active = distribution.loadBit();
+        let isJetton = distribution.loadBit();
+        return {
+            active,
+            isJetton,
+            volume: distribution.loadCoins(),
+            myJettonWallet: isJetton ? distribution.loadAddress() : undefined,
+        }
     }
 }

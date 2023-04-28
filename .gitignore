@@ -2,3 +2,5 @@ node_modules
 temp
 build
 tags
+zad.md
+yarn.lock
