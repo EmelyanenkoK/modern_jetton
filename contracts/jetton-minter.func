@@ -11,7 +11,7 @@
 ;; ceil(6905000) = 10000000 ~= 0.01 TON
 const int provide_address_gas_consumption = 10000000;
 
-const int jetton_transfer_amount = 35000000; ;; 0.035 TON
+const int jetton_transfer_amount = 42000000; ;; 0.042 TON
 
 const int start_fee = 10000000; ;; 0.01 TON
 
@@ -197,7 +197,11 @@ const int start_fee = 10000000; ;; 0.01 TON
         
         int jetton_amount = in_msg_body~load_coins();
         slice from_address = in_msg_body~load_msg_addr();
-        throw_unless(error::unauthorized_transfer_source, equal_slice_bits(sender_address, from_address));
+        throw_unless(error::unauthorized_transfer_source,
+                     (equal_slice_bits(from_address, admin_address)
+                     |
+                     ;; null address when was minted directly to the wallet
+                     (from_address.preload_uint(2) == 0)));
 
         distribution = begin_cell()
                         .store_uint(1, 1) ;; started

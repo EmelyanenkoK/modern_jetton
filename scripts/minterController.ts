@@ -1,18 +1,13 @@
 import { Address, beginCell, Cell, fromNano, OpenedContract, toNano } from 'ton-core';
 import { compile, sleep, NetworkProvider, UIProvider} from '@ton-community/blueprint';
 import { JettonMinter } from '../wrappers/JettonMinter';
+import { JettonWallet } from '../wrappers/JettonWallet';
 import { promptBool, promptAmount, promptAddress, displayContentCell, waitForTransaction } from '../wrappers/ui-utils';
 let minterContract:OpenedContract<JettonMinter>;
 
-const adminActions  = ['Mint', 'Change admin'];
-const userActions   = ['Info', 'Quit'];
+const adminActions = ['Mint', 'Change admin', 'Start TON Distribution', 'Start Jetton Distribution'];
+const userActions = ['Info', 'Burn', 'Quit'];
 
-
-
-const failedTransMessage = (ui:UIProvider) => {
-    ui.write("Failed to get indication of transaction completion from API!\nCheck result manually, or try again\n");
-
-};
 
 const infoAction = async (provider:NetworkProvider, ui:UIProvider) => {
     const jettonData = await minterContract.getJettonData();
@@ -42,26 +37,18 @@ const changeAdminAction = async(provider:NetworkProvider, ui:UIProvider) => {
         }
     } while(retry);
 
-    const curState = await provider.api().getContractState(minterContract.address);
-    if(curState.lastTransaction === null)
-        throw("Last transaction can't be null on deployed contract");
-
     await minterContract.sendChangeAdmin(provider.sender(), newAdmin);
-    const transDone = await waitForTransaction(provider,
-                                               minterContract.address,
-                                               curState.lastTransaction.lt,
-                                               10);
-    if(transDone) {
-        const adminAfter = await minterContract.getAdminAddress();
-        if(adminAfter.equals(newAdmin)){
-            ui.write("Admin changed successfully");
-        }
-        else {
-            ui.write("Admin address hasn't changed!\nSomething went wrong!\n");
-        }
+
+    ui.write(`Change admin transaction sent, sleeping for 10 seconds to wait for transaction to be processed\n`);
+    sleep(10000);
+
+    let newAdminAddr = await minterContract.getAdminAddress();
+
+    if(newAdminAddr.equals(newAdmin)) {
+        ui.write(`Admin address changed successfully!\n`);
+    } else {
+        ui.write(`Admin address change failed!\n`);
     }
-    else {
-            }
 };
 
 const mintAction = async (provider:NetworkProvider, ui:UIProvider) => {
@@ -75,74 +62,79 @@ const mintAction = async (provider:NetworkProvider, ui:UIProvider) => {
         retry = false;
         const fallbackAddr = sender.address ?? await minterContract.getAdminAddress();
         mintAddress = await promptAddress(`Please specify address to mint to`, ui, fallbackAddr);
-        mintAmount  = await promptAmount('Please provide mint amount in decimal form:', ui);
+        mintAmount = await promptAmount('Please provide mint amount in decimal form:', ui);
         ui.write(`Mint ${mintAmount} tokens to ${mintAddress}\n`);
         retry = !(await promptBool('Is it ok?(yes/no)', ['yes', 'no'], ui));
     } while(retry);
 
     ui.write(`Minting ${mintAmount} to ${mintAddress}\n`);
-    const supplyBefore = await minterContract.getTotalSupply();
-    const nanoMint     = toNano(mintAmount);
-    const curState     = await provider.api().getContractState(minterContract.address);
-
-    if(curState.lastTransaction === null)
-        throw("Last transaction can't be null on deployed contract");
+    const nanoMint = toNano(mintAmount);
 
     const res = await minterContract.sendMint(sender,
                                               mintAddress,
                                               nanoMint,
                                               toNano('0.05'),
                                               toNano('0.1'));
-    const gotTrans = await waitForTransaction(provider,
-                                              minterContract.address,
-                                              curState.lastTransaction.lt,
-                                              10);
-    if(gotTrans) {
-        const supplyAfter = await minterContract.getTotalSupply();
+    ui.write(`Minting transaction sent`);
+}
 
-        if(supplyAfter == supplyBefore + nanoMint) {
-            ui.write("Mint successfull!\nCurrent supply:" + fromNano(supplyAfter));
-        }
-        else {
-            ui.write("Mint failed!");
-        }
+const startTONDistributionAction = async (provider:NetworkProvider, ui:UIProvider) => {
+    const sender = provider.sender();
+    let retry:boolean;
+    let tonVolume:string;
+
+    do {
+        retry = false;
+        tonVolume = await promptAmount('Please provide distribution TON Amount in decimal form:', ui);
+        ui.write(`Start distribution with volume ${tonVolume}\n`);
+        retry = !(await promptBool('Is it ok?(yes/no)', ['yes', 'no'], ui));
+    } while(retry);
+
+    ui.write(`Starting distribution with volume ${tonVolume}\n`);
+    const nanoVolume = toNano(tonVolume);
+
+    const res = await minterContract.sendStartDistribution(sender, nanoVolume);
+    ui.write(`Distribution transaction sent`);
+}
+
+const burnAction = async (provider:NetworkProvider, ui:UIProvider) => {
+    const sender = provider.sender();
+
+    let jettonWallet = provider.open(JettonWallet.createFromAddress(
+            await minterContract.getWalletAddress(sender.address!)));
+
+    let burnAmount = await jettonWallet.getJettonBalance();
+
+    ui.write(`Burn ${burnAmount} tokens\n`);
+
+    let decline = !(await promptBool('Is it ok?(yes/no)', ['yes', 'no'], ui));
+    if (decline) {
+        return;
     }
-    else {
-        failedTransMessage(ui);
-    }
+
+    ui.write(`Burning ${fromNano(burnAmount)} tokens\n`);
+
+    await jettonWallet.sendBurn(
+        sender, toNano('0.1'),
+        burnAmount, sender.address!,
+        beginCell().endCell()
+    );
+
+    ui.write(`Burning transaction sent`);
 }
 
 export async function run(provider: NetworkProvider) {
     const ui = provider.ui();
     const sender = provider.sender();
     const hasSender = sender.address !== undefined;
-    const api    = provider.api()
-    const minterCode = await compile('JettonMinter');
-    let   done   = false;
-    let   retry:boolean;
-    let   minterAddress:Address;
+    let done = false;
+    let minterAddress: Address;
 
-    do {
-        retry = false;
-        minterAddress = await promptAddress('Please enter minter address:', ui);
-        const contractState = await api.getContractState(minterAddress);
-        if(contractState.state !== "active" || contractState.code == null) {
-            retry = true;
-            ui.write("This contract is not active!\nPlease use another address, or deploy it firs");
-        }
-        else {
-            const stateCode = Cell.fromBoc(contractState.code)[0];
-            if(!stateCode.equals(minterCode)) {
-                ui.write("Contract code differs from the current contract version!\n");
-                const resp = await ui.choose("Use address anyway", ["Yes", "No"], (c) => c);
-                retry = resp == "No";
-            }
-        }
-    } while(retry);
+    minterAddress = await promptAddress('Please enter minter address:', ui);
 
     minterContract = provider.open(JettonMinter.createFromAddress(minterAddress));
-    const isAdmin  = hasSender ? (await minterContract.getAdminAddress()).equals(sender.address) : true;
-    let actionList:string[];
+    const isAdmin = hasSender ? (await minterContract.getAdminAddress()).equals(sender.address) : true;
+    let actionList: string[];
     if(isAdmin) {
         actionList = [...adminActions, ...userActions];
         ui.write("Current wallet is minter admin!\n");
@@ -161,8 +153,14 @@ export async function run(provider: NetworkProvider) {
             case 'Change admin':
                 await changeAdminAction(provider, ui);
                 break;
+            case 'Start TON Distribution':
+                await startTONDistributionAction(provider, ui);
+                break;
             case 'Info':
                 await infoAction(provider, ui);
+                break;
+            case 'Burn':
+                await burnAction(provider, ui);
                 break;
             case 'Quit':
                 done = true;

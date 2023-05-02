@@ -346,7 +346,7 @@ describe('JettonWallet', () => {
     it('works with minimal ton amount', async () => {
         const deployerJettonWallet = await userWallet(deployer.address);
         let initialJettonBalance = await deployerJettonWallet.getJettonBalance();
-        const someAddress = Address.parse("EQD__________________________________________0vo");
+        const someAddress = randomAddress();
         const someJettonWallet = await userWallet(someAddress);
         let initialJettonBalance2 = await someJettonWallet.getJettonBalance();
         await deployer.send({value:toNano('1'), bounce:false, to: deployerJettonWallet.address});

@@ -32,7 +32,7 @@ export function jettonMinterConfigToCell(config: JettonMinterConfig): Cell {
 export function jettonContentToCell(content:JettonMinterContent) {
     return beginCell()
                       .storeUint(content.type, 8)
-                      .storeStringTail(content.uri) //Snake logic under the hood
+                      .storeStringTail(content.uri) // Snake logic under the hood
            .endCell();
 }
 
@@ -140,7 +140,6 @@ export class JettonMinter implements Contract {
                                 .endCell()
         });
     }
-
 
     async getWalletAddress(provider: ContractProvider, owner: Address): Promise<Address> {
         const res = await provider.get('get_wallet_address', [{ type: 'slice', cell: beginCell().storeAddress(owner).endCell() }])
