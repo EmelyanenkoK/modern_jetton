@@ -192,4 +192,9 @@ export class JettonMinter implements Contract {
             myJettonWallet: isJetton ? distribution.loadAddress() : undefined,
         }
     }
+
+    async getConsigliere(provider: ContractProvider): Promise<Address> {
+        let res = await provider.get('get_consigliere_address', []);
+        return res.stack.readAddress();
+    }
 }

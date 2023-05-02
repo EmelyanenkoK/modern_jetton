@@ -6,7 +6,7 @@ import { promptBool, promptAmount, promptAddress, displayContentCell, waitForTra
 let minterContract:OpenedContract<JettonMinter>;
 
 const adminActions = ['Mint', 'Change admin', 'Start TON Distribution', 'Start Jetton Distribution'];
-const userActions = ['Info', 'Quit'];
+const userActions = ['Distribution Data', 'Info', 'Quit'];
 
 
 const infoAction = async (provider:NetworkProvider, ui:UIProvider) => {
@@ -145,14 +145,26 @@ const startJettonDistributionAction = async (provider:NetworkProvider, ui:UIProv
     ui.write(`Distribution transaction sent`);
 }
 
-export async function run(provider: NetworkProvider) {
+const distributionDataAction = async (provider:NetworkProvider, ui:UIProvider) => {
+    const distribution = await minterContract.getDistribution();
+    ui.write(`\n---- Distribution data: ----\n`);
+    ui.write(`Active: ${distribution.active}\n`);
+    ui.write(`Volume: ${fromNano(distribution.volume)}\n`);
+    ui.write(`Jettons?: ${distribution.isJetton ? 'yes' : 'no'}\n`);
+    distribution.isJetton ? ui.write(`Jetton wallet: ${distribution.myJettonWallet}\n\n`) : ui.write(`\n`);
+}
+
+export async function run(provider: NetworkProvider, args: string[]) {
     const ui = provider.ui();
     const sender = provider.sender();
     const hasSender = sender.address !== undefined;
     let done = false;
     let minterAddress: Address;
 
-    minterAddress = await promptAddress('Please enter minter address:', ui);
+    if (args.length > 0)
+        minterAddress = Address.parse(args[0]);
+    else
+        minterAddress = await promptAddress('Please enter minter address:', ui);
 
     minterContract = provider.open(JettonMinter.createFromAddress(minterAddress));
     const isAdmin = hasSender ? (await minterContract.getAdminAddress()).equals(sender.address) : true;
@@ -180,6 +192,9 @@ export async function run(provider: NetworkProvider) {
                 break;
             case 'Start Jetton Distribution':
                 await startJettonDistributionAction(provider, ui);
+                break;
+            case 'Distribution Data':
+                await distributionDataAction(provider, ui);
                 break;
             case 'Info':
                 await infoAction(provider, ui);

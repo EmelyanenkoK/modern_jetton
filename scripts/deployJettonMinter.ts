@@ -75,8 +75,9 @@ export async function run(provider: NetworkProvider) {
     const wallet_code = await compile('JettonWallet');
 
     const minter  = provider.open(
-        JettonMinter.createFromConfig({admin,
-              consigliere: admin,
+        JettonMinter.createFromConfig({
+              admin,
+              consigliere,
               content,
               wallet_code,
           }, await compile('JettonMinter'))

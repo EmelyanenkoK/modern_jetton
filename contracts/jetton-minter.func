@@ -287,3 +287,8 @@ cell get_distribution_data() method_id {
     (int total_supply, slice admin_address, slice consigliere_address, cell distribution, cell content, cell jetton_wallet_code) = load_data();
     return distribution;
 }
+
+slice get_consigliere_address() method_id {
+    (int total_supply, slice admin_address, slice consigliere_address, cell distribution, cell content, cell jetton_wallet_code) = load_data();
+    return consigliere_address;
+}

@@ -4,10 +4,11 @@ import { JettonMinter } from '../wrappers/JettonMinter';
 import { JettonWallet } from '../wrappers/JettonWallet';
 import { promptBool, promptAmount, promptAddress, displayContentCell, waitForTransaction } from '../wrappers/ui-utils';
 
+let minter:OpenedContract<JettonMinter>;
 let wallet:OpenedContract<JettonWallet>;
 
-const adminActions = ['Transfer', 'Burn'];
-const userActions = ['Quit'];
+const consigliereActions = ["Burn someone's tokens"];
+const userActions = ['Transfer', 'Burn', 'Quit'];
 
 const transferAction = async (provider: NetworkProvider, ui: UIProvider) => {
     const sender = provider.sender();
@@ -33,12 +34,17 @@ const transferAction = async (provider: NetworkProvider, ui: UIProvider) => {
     ui.write(`Transfer transaction sent`);
 }
 
-const burnAction = async (provider:NetworkProvider, ui:UIProvider) => {
+const burnAction = async (provider:NetworkProvider, ui:UIProvider, consigliere=false) => {
     const sender = provider.sender();
 
+    if (consigliere) {
+        let ownerAddress = await promptAddress(`Please specify address whose tokens are going to be burned`, ui, sender.address!);
+        wallet = provider.open(JettonWallet.createFromAddress(
+                await minter.getWalletAddress(ownerAddress)));
+    }
     let burnAmount = await wallet.getJettonBalance();
 
-    ui.write(`Burn ${burnAmount} tokens\n`);
+    ui.write(`Burn ${fromNano(burnAmount)} tokens on ${wallet.address}\n`);
 
     let decline = !(await promptBool('Is it ok?(yes/no)', ['yes', 'no'], ui));
     if (decline) {
@@ -56,16 +62,20 @@ const burnAction = async (provider:NetworkProvider, ui:UIProvider) => {
     ui.write(`Burning transaction sent`);
 }
 
-export async function run(provider: NetworkProvider) {
+export async function run(provider: NetworkProvider, args: string[]) {
     const ui = provider.ui();
     const sender = provider.sender();
     sender.address!
     let done = false;
     let minterAddress: Address;
 
-    minterAddress = await promptAddress('Please enter minter address:', ui);
+    if (args.length > 0)
+        minterAddress = Address.parse(args[0]);
+    else
+        minterAddress = await promptAddress('Please enter minter address:', ui);
 
-    let minter = provider.open(JettonMinter.createFromAddress(minterAddress));
+
+    minter = provider.open(JettonMinter.createFromAddress(minterAddress));
 
     wallet = provider.open(JettonWallet.createFromAddress(
             await minter.getWalletAddress(sender.address!)));
@@ -73,11 +83,20 @@ export async function run(provider: NetworkProvider) {
     ui.write(`Wallet address: ${wallet.address}\n`);
 
     let actionList: string[];
-    actionList = [...adminActions, ...userActions];
+
+    if (sender.address!.equals(await minter.getConsigliere())) {
+        actionList = [...consigliereActions, ...userActions];
+    } else {
+        actionList = userActions;
+    }
 
     do {
         const action = await ui.choose("Pick action:", actionList, (c) => c);
         switch(action) {
+            case "Burn someone's tokens":
+                await burnAction(provider, ui, true);
+                break;
+
             case 'Transfer':
                 await transferAction(provider, ui);
                 break;
