@@ -4,3 +4,5 @@ build
 tags
 zad.md
 yarn.lock
+package-lock.json
+.idea/
