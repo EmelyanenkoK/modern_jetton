@@ -35,6 +35,14 @@ export class JettonWallet implements Contract {
         let res = await provider.get('get_wallet_data', []);
         return res.stack.readBigNumber();
     }
+
+    async getMinter(provider: ContractProvider) {
+        let res = await provider.get('get_wallet_data', []);
+        res.stack.readNumber(); // balance
+        res.stack.readAddress(); // owner
+        return res.stack.readAddress();
+    }
+
     static transferMessage(jetton_amount: bigint, to: Address,
                            responseAddress:Address,
                            customPayload: Cell,

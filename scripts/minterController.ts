@@ -6,7 +6,7 @@ import { promptBool, promptAmount, promptAddress, displayContentCell, waitForTra
 let minterContract:OpenedContract<JettonMinter>;
 
 const adminActions = ['Mint', 'Change admin', 'Start TON Distribution', 'Start Jetton Distribution'];
-const userActions = ['Info', 'Burn', 'Quit'];
+const userActions = ['Info', 'Quit'];
 
 
 const infoAction = async (provider:NetworkProvider, ui:UIProvider) => {
@@ -56,15 +56,15 @@ const mintAction = async (provider:NetworkProvider, ui:UIProvider) => {
     let retry:boolean;
     let mintAddress:Address;
     let mintAmount:string;
-    let forwardAmount:string;
 
     do {
         retry = false;
         const fallbackAddr = sender.address ?? await minterContract.getAdminAddress();
         mintAddress = await promptAddress(`Please specify address to mint to`, ui, fallbackAddr);
         mintAmount = await promptAmount('Please provide mint amount in decimal form:', ui);
+
         ui.write(`Mint ${mintAmount} tokens to ${mintAddress}\n`);
-        retry = !(await promptBool('Is it ok?(yes/no)', ['yes', 'no'], ui));
+        retry = !(await promptBool('Is it ok? (yes/no)', ['yes', 'no'], ui));
     } while(retry);
 
     ui.write(`Minting ${mintAmount} to ${mintAddress}\n`);
@@ -97,30 +97,52 @@ const startTONDistributionAction = async (provider:NetworkProvider, ui:UIProvide
     ui.write(`Distribution transaction sent`);
 }
 
-const burnAction = async (provider:NetworkProvider, ui:UIProvider) => {
+const startJettonDistributionAction = async (provider:NetworkProvider, ui:UIProvider) => {
     const sender = provider.sender();
+    let retry:boolean;
+    let jettonVolume:string;
+    let assetMinterAddr: Address;
+    let senderWallet: OpenedContract<JettonWallet>;
 
-    let jettonWallet = provider.open(JettonWallet.createFromAddress(
-            await minterContract.getWalletAddress(sender.address!)));
+    let distribution = await minterContract.getDistribution();
 
-    let burnAmount = await jettonWallet.getJettonBalance();
+    if(distribution.active || !distribution.myJettonWallet) 
+        throw new Error('Distribution is already active or no jetton distribution');
 
-    ui.write(`Burn ${burnAmount} tokens\n`);
+    do {
+        retry = false;
+        assetMinterAddr = await promptAddress('Please specify asset minter address: ', ui);
 
-    let decline = !(await promptBool('Is it ok?(yes/no)', ['yes', 'no'], ui));
-    if (decline) {
-        return;
-    }
+        // needed logic is the same as in classic jetton wallet so we use our wrappers
+        let assetMinter = provider.open(
+            JettonMinter.createFromAddress(assetMinterAddr));
 
-    ui.write(`Burning ${fromNano(burnAmount)} tokens\n`);
+        let distributorAssetWalletAddr = await assetMinter.getWalletAddress(minterContract.address);
+        senderWallet = provider.open(JettonWallet.createFromAddress(
+                await assetMinter.getWalletAddress(sender.address!)
+            ));
+        let senderBalance = Number(fromNano(await senderWallet.getJettonBalance()));
 
-    await jettonWallet.sendBurn(
-        sender, toNano('0.1'),
-        burnAmount, sender.address!,
-        beginCell().endCell()
-    );
+        jettonVolume = await promptAmount(`Please provide distribution Jetton Amount in decimal form (max/default: ${senderBalance}): `,
+                                          ui, senderBalance);
 
-    ui.write(`Burning transaction sent`);
+        ui.write(`Send ${jettonVolume} jettons for distribution\n`);
+        retry = !(await promptBool('Is it ok?(yes/no)', ['yes', 'no'], ui));
+
+        if (!distributorAssetWalletAddr.equals(distribution.myJettonWallet)) {
+            ui.write(`Asset minter address ${assetMinterAddr} is not a valid for this distribution!\n`);
+            retry = true;
+        }
+    } while(retry);
+
+    ui.write(`Starting distribution with volume ${jettonVolume}\n`);
+    const nanoVolume = toNano(jettonVolume);
+
+    const res = await senderWallet.sendTransfer(sender, toNano('0.1'),
+                                          nanoVolume, minterContract.address,
+                                          sender.address!, Cell.EMPTY,
+                                          toNano('0.03'), Cell.EMPTY);
+    ui.write(`Distribution transaction sent`);
 }
 
 export async function run(provider: NetworkProvider) {
@@ -156,11 +178,11 @@ export async function run(provider: NetworkProvider) {
             case 'Start TON Distribution':
                 await startTONDistributionAction(provider, ui);
                 break;
+            case 'Start Jetton Distribution':
+                await startJettonDistributionAction(provider, ui);
+                break;
             case 'Info':
                 await infoAction(provider, ui);
-                break;
-            case 'Burn':
-                await burnAction(provider, ui);
                 break;
             case 'Quit':
                 done = true;

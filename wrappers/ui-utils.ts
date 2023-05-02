@@ -42,10 +42,13 @@ export const waitForTransaction = async (provider:NetworkProvider, address:Addre
     return false;
 }
 
-export const promptAmount = async (prompt:string, provider:UIProvider) => {
+export const promptAmount = async (prompt:string, provider:UIProvider, fallback?:number) => {
     let resAmount:number;
     do {
         let inputAmount = await provider.input(prompt);
+        if (inputAmount == "" && fallback) {
+            return fallback.toFixed(9);
+        }
         resAmount = Number(inputAmount);
         if(isNaN(resAmount)) {
             provider.write("Failed to convert " + inputAmount + " to float number");
