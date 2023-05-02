@@ -1,5 +1,4 @@
-# Jetton
+# Share Distributor Contract
 
-Implementation of standard jetton with additonal *withdraw_tons* and *withdraw_jettons*.
-
-Also tests via sandbox
+Jetton implementation with ability to distribute asset (TON or TEP-74
+jettons) among holders by burning. 
