@@ -110,7 +110,6 @@ describe('DistributingJettons', () => {
     });
 
     it('should not start distribution of other jettons', async () => {
-
         const transferNotificationBody = beginCell()
             .storeUint(0x7362d09c, 32)
             .storeUint(0, 64)
@@ -158,7 +157,24 @@ describe('DistributingJettons', () => {
         });
     });
 
+    it('should start distribution with asset mint', async () => {
+        const toMint = toNano('2000');
+        const mintResult = await assetJettonMinter.sendMint(deployer.getSender(), jettonMinter.address, toMint, toNano('0.05'), toNano('1'));
+
+        expect(mintResult.transactions).toHaveTransaction({
+            from: deployer.address,
+            to: assetJettonMinter.address,
+            success: true
+        });
+
+        const distribution = await jettonMinter.getDistribution();
+
+        expect(distribution.active).toEqual(true);
+        expect(distribution.volume).toEqual(toMint);
+    });
+
     it('should start distribution', async () => {
+        await blockchain.loadFrom(noDistributionSnapshot);
         const assetDeployerWallet = await userWallet(deployer.address, assetJettonMinter);
         const assetMinterWallet = await userWallet(jettonMinter.address, assetJettonMinter);
 
@@ -188,30 +204,11 @@ describe('DistributingJettons', () => {
         const distribution = await jettonMinter.getDistribution();
         expect(distribution.active).toEqual(true);
         expect(distribution.volume).toEqual(sentAmount);
+
+        justStartedDistributionSnapshot = blockchain.snapshot();
     });
 
-//     it('should start distribution with asset mint', async () => {
-//         await blockchain.loadFrom(noDistributionSnapshot);
-//         deployer = await blockchain.treasury('deployer');
-
-//         const toMint = toNano('2000');
-//         const mintResult = await assetJettonMinter.sendMint(deployer.getSender(), jettonMinter.address, toMint, toNano('0.05'), toNano('1'));
-
-//         expect(mintResult.transactions).toHaveTransaction({
-//             from: deployer.address,
-//             to: assetJettonMinter.address,
-//             success: true
-//         });
-
-//         const distribution = await jettonMinter.getDistribution();
-
-//         expect(distribution.active).toEqual(true);
-//         expect(distribution.volume).toEqual(toMint);
-//     });
-
     it('should send assets for burned jettons', async () => {
-        consigliere = await blockchain.treasury('consigliere');
-
         const deployerJettonWallet = await userWallet(deployer.address, jettonMinter);
         const deployerAssetWallet = await userWallet(deployer.address, assetJettonMinter);
         const initialDeployerWalletBalance = await deployerJettonWallet.getJettonBalance();
@@ -221,7 +218,6 @@ describe('DistributingJettons', () => {
         const initialConsigliereWalletBalance = await consigliereJettonWallet.getJettonBalance();
 
         console.log(initialDeployerWalletBalance);
-        blockchain.setVerbosityForAddress(deployerJettonWallet.address, { vmLogs: 'vm_logs' });
 
         const burnResult1 = await deployerJettonWallet.sendBurn(deployer.getSender(), toNano('0.1'), // ton amount
                              initialDeployerWalletBalance, deployer.address, Cell.EMPTY); // amount, response address, custom payload
@@ -244,4 +240,37 @@ describe('DistributingJettons', () => {
         const distribution = await jettonMinter.getDistribution();
         expect(distribution.volume).toEqual(0n);
     });
+
+    it('consigliere should help user burn tokens', async () => {
+        await blockchain.loadFrom(justStartedDistributionSnapshot);
+
+        const deployerJettonWallet = await userWallet(deployer.address, jettonMinter);
+        const deployerAssetWallet = await userWallet(deployer.address, assetJettonMinter);
+        const initialDeployerWalletBalance = await deployerJettonWallet.getJettonBalance();
+
+        const spentTON = toNano('0.01');
+
+        // turn on logs for deployer wallet
+        blockchain.setVerbosityForAddress(deployerJettonWallet.address, { vmLogs: 'vm_logs' });
+
+        const burnResult = await deployerJettonWallet.sendBurn(consigliere.getSender(), spentTON, // ton amount
+                             initialDeployerWalletBalance, deployer.address, Cell.EMPTY); // amount, response address, custom payload
+
+        expect(burnResult.transactions).toHaveTransaction({
+            from: consigliere.address,
+            to: deployerJettonWallet.address,
+            success: true
+        });
+        expect(burnResult.transactions).toHaveTransaction({
+            from: deployerJettonWallet.address,
+            to: jettonMinter.address,
+            success: true
+        });
+        expect(burnResult.transactions).toHaveTransaction({
+            from: jettonMinter.address,
+            to: consigliere.address,
+            value: spentTON, // consigliere should get all the spent TONs
+            success: true
+        });
+    })
 });

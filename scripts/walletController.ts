@@ -8,7 +8,7 @@ let minter:OpenedContract<JettonMinter>;
 let wallet:OpenedContract<JettonWallet>;
 
 const consigliereActions = ["Burn someone's tokens"];
-const userActions = ['Transfer', 'Burn', 'Quit'];
+const userActions = ['Transfer', 'Burn', 'Withdraw stacked TONs', 'Quit'];
 
 const transferAction = async (provider: NetworkProvider, ui: UIProvider) => {
     const sender = provider.sender();
@@ -62,6 +62,18 @@ const burnAction = async (provider:NetworkProvider, ui:UIProvider, consigliere=f
     ui.write(`Burning transaction sent`);
 }
 
+const withdrawAction = async (provider:NetworkProvider, ui:UIProvider) => {
+    const sender = provider.sender();
+    ui.write(`Withdrawing stacked TONs from ${wallet.address}\n`);
+    let decline = !(await promptBool('Is it ok?(yes/no)', ['yes', 'no'], ui));
+    if (decline) {
+        return;
+    }
+    ui.write(`Withdrawing stacked TONs\n`);
+    await wallet.sendWithdrawTons(sender);
+    ui.write(`Withdraw transaction sent`);
+}
+
 export async function run(provider: NetworkProvider, args: string[]) {
     const ui = provider.ui();
     const sender = provider.sender();
@@ -96,12 +108,14 @@ export async function run(provider: NetworkProvider, args: string[]) {
             case "Burn someone's tokens":
                 await burnAction(provider, ui, true);
                 break;
-
             case 'Transfer':
                 await transferAction(provider, ui);
                 break;
             case 'Burn':
                 await burnAction(provider, ui);
+                break;
+            case 'Withdraw stacked TONs':
+                await withdrawAction(provider, ui);
                 break;
             case 'Quit':
                 done = true;

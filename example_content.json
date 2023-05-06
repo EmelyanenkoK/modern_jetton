@@ -1,7 +1,7 @@
 {
   "name": "Sample Jetton",
   "description": "Sample of Jetton",
-  "symbol": "JTN",
+  "symbol": "OOO",
   "decimals": 9,
-  "image": "https://www.svgrepo.com/download/483336/coin-vector.svg"
+  "image": "https://s2.coinmarketcap.com/static/img/coins/200x200/21379.png"
 }

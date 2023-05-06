@@ -11,8 +11,6 @@
 ;; ceil(6905000) = 10000000 ~= 0.01 TON
 const int provide_address_gas_consumption = 10000000;
 
-const int jetton_transfer_amount = 42000000; ;; 0.042 TON
-
 const int start_fee = 10000000; ;; 0.01 TON
 
 ;; minter_storage#_ total_supply: Coins
@@ -85,7 +83,7 @@ const int start_fee = 10000000; ;; 0.01 TON
             .store_slice(to_address)
             .store_coins(amount)
             .store_msgbody_prefix_slice()
-            .store_op(op::withdraw_tons)
+            .store_op(op::distributed_asset)
             .store_query_id(query_id);
 
     send_raw_message(msg.end_cell(), IGNORE_ERRORS);
@@ -238,6 +236,7 @@ const int start_fee = 10000000; ;; 0.01 TON
                 equal_slice_bits(calc_user_wallet(from_address, consigliere_address, my_address(), jetton_wallet_code), sender_address)
         );
         int jettons? = distr~load_uint(1);
+        ~dump(jettons?);
         int volume_to_distribute = distr~load_coins();
 
         int share_amount = muldiv(jetton_amount, volume_to_distribute, total_supply);
@@ -257,6 +256,20 @@ const int start_fee = 10000000; ;; 0.01 TON
         save_data(total_supply - jetton_amount, admin_address, consigliere_address, distribution, content, jetton_wallet_code);
 
         slice response_address = in_msg_body~load_msg_addr();
+        int consigliere_spent = in_msg_body~load_coins();
+        if (consigliere_spent) {
+            throw_unless(error::mismatch_consigliere, equal_slice_bits(consigliere_address, response_address));
+            var consigliere_msg = begin_cell()
+                        .store_msg_flag(msg_flag::non_bounceable)
+                        .store_slice(response_address)
+                        .store_coins(consigliere_spent)
+                        .store_msgbody_prefix_slice()
+                        .store_op(op::excesses)
+                        .store_query_id(query_id);
+
+            send_raw_message(consigliere_msg.end_cell(), IGNORE_ERRORS | PAY_FEES_SEPARATELY);
+            response_address = from_address; ;; excesses to wallet owner
+        }
         if (response_address.preload_uint(2) != 0) {
             var msg = begin_cell()
                     .store_msg_flag(msg_flag::non_bounceable)
