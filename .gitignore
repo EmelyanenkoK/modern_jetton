@@ -6,3 +6,4 @@ zad.md
 yarn.lock
 package-lock.json
 .idea/
+.prettierrc
