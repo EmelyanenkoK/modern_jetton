@@ -29,6 +29,15 @@ export function jettonMinterConfigToCell(config: JettonMinterConfig): Cell {
            .endCell();
 }
 
+export function jettonClassicMinterConfigToCell(config: JettonMinterConfig): Cell {
+    return beginCell()
+        .storeCoins(0)
+        .storeAddress(config.admin)
+        .storeRef(config.content)
+        .storeRef(config.wallet_code)
+    .endCell();
+}
+
 export function jettonContentToCell(content:JettonMinterContent) {
     return beginCell()
                       .storeUint(content.type, 8)
@@ -59,6 +68,11 @@ export class JettonMinter implements Contract {
         const init = { code, data };
         return new JettonMinter(contractAddress(workchain, init), init);
     }
+    static createClassicFromConfig(config: JettonMinterConfig, code: Cell, workchain = 0) {
+        const data = jettonClassicMinterConfigToCell(config);
+        const init = { code, data };
+        return new JettonMinter(contractAddress(workchain, init), init);
+    }
 
     async sendDeploy(provider: ContractProvider, via: Sender, distribution: Distribution, value: bigint) {
         if (distribution.active) {
@@ -84,8 +98,16 @@ export class JettonMinter implements Contract {
     async sendMint(provider: ContractProvider, via: Sender, to: Address, jetton_amount: bigint, forward_ton_amount: bigint, total_ton_amount: bigint,) {
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: JettonMinter.mintMessage(to, jetton_amount, forward_ton_amount, total_ton_amount,),
-            value: total_ton_amount + toNano("0.1"),
+            body: JettonMinter.mintMessage(to, jetton_amount, forward_ton_amount, total_ton_amount),
+            value: total_ton_amount + toNano("0.02"),
+        });
+    }
+
+    async send(provider: ContractProvider, via: Sender, value: bigint, body: Cell) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: body,
         });
     }
 

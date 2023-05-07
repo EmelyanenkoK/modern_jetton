@@ -73,8 +73,8 @@ const mintAction = async (provider:NetworkProvider, ui:UIProvider) => {
     const res = await minterContract.sendMint(sender,
                                               mintAddress,
                                               nanoMint,
-                                              toNano('0.05'),
-                                              toNano('0.1'));
+                                              toNano('0.01'),
+                                              toNano('0.13'));
     ui.write(`Minting transaction sent`);
 }
 

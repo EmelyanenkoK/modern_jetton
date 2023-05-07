@@ -5,8 +5,6 @@
 #include "params.func";
 #include "messages.func";
 
-const int min_tons_for_storage = 10000000; ;; 0.01 TON;
-
 ;; Note that 2 * gas_consumptions is expected to be able to cover fees on both wallets (sender and receiver)
 ;; and also constant fees on inter-wallet interaction, in particular fwd fee on state_init transfer
 ;; that means that you need to reconsider this fee when:
@@ -15,11 +13,10 @@ const int min_tons_for_storage = 10000000; ;; 0.01 TON;
 ;; c) global fee changes / different workchain
 const int gas_consumption = 14000000;
 
-;; TODO: take aperox. value from real tests
-const int wallet_burn_fee = 15000000; ;; 0.015 TON
-const int minter_burn_fee = 15000000; ;; 0.015 TON
+const int wallet_burn_fee = 10000000; ;; 0.0055 -> 0.01 TON
+const int minter_burn_fee = 14000000; ;; 0.013087 -> 0.014 TON
 
-;; const int min_tons_for_storage = wallet_burn_fee ;; calculation of this action
+;; const int wallet_min_ton_balance = wallet_burn_fee ;; calculation of this action
 ;;                        + fwd_fee ;; forward fee to minter
 ;;                        + minter_burn_fee ;; minter caclulation of burn_notification
 ;;                        + fwd_fee ;; forward fee to consigliere
@@ -106,7 +103,7 @@ const int minter_burn_fee = 15000000; ;; 0.015 TON
                      ;; 3 messages: wal1->wal2,  wal2->owner, wal2->response
                      ;; but last one is optional (it is ok if it fails)
                      fwd_count * fwd_fee +
-                     (2 * gas_consumption + min_tons_for_storage));
+                     (2 * gas_consumption + wallet_min_ton_balance));
                      ;; universal message send fee calculation may be activated here
                      ;; by using this instead of fwd_fee
                      ;; msg_fwd_fee(to_wallet, msg_body, state_init, 15)
@@ -141,7 +138,7 @@ const int minter_burn_fee = 15000000; ;; 0.015 TON
   int forward_ton_amount = in_msg_body~load_coins();
 
   int ton_balance_before_msg = my_ton_balance - msg_value;
-  ;;int storage_fee = min_tons_for_storage - min(ton_balance_before_msg, min_tons_for_storage);
+  ;;int storage_fee = wallet_min_ton_balance - min(ton_balance_before_msg, wallet_min_ton_balance);
   ;;msg_value -= (storage_fee + gas_consumption);
   if(forward_ton_amount) {
     msg_value -= (forward_ton_amount + fwd_fee);
@@ -163,7 +160,7 @@ const int minter_burn_fee = 15000000; ;; 0.015 TON
 
     send_raw_message(msg.end_cell(), PAY_FEES_SEPARATELY);
   }
-  raw_reserve(max(ton_balance_before_msg, min_tons_for_storage), 2);
+  raw_reserve(max(ton_balance_before_msg, wallet_min_ton_balance), 2);
   if ((response_address.preload_uint(2) != 0) & (msg_value > 0)) {
     var msg = begin_cell()
             .store_msg_flag(msg_flag::non_bounceable)
@@ -267,7 +264,7 @@ const int minter_burn_fee = 15000000; ;; 0.015 TON
   ;; Withdraw tons or jettons which accidentally were sent to this jettonWallet
   if (op == op::withdraw_tons) {
     throw_unless(error::unauthorized_transfer, equal_slice_bits(owner_address, sender_address));
-    raw_reserve(min_tons_for_storage, 0);
+    raw_reserve(wallet_min_ton_balance, 0);
     var msg = begin_cell()
             .store_msg_flag(msg_flag::non_bounceable)
             .store_slice(owner_address)

@@ -1,5 +1,9 @@
 #include "params.func";
 
+const int jetton_transfer_amount = 42000000; ;; 0.042 TON
+const int wallet_min_ton_balance = 100000000; ;; 0.1 TON
+
+
 cell pack_jetton_wallet_data (int balance, slice owner, slice consigliere, slice jetton_master, cell token_wallet_code) inline {
     return  begin_cell()
             .store_grams(balance)

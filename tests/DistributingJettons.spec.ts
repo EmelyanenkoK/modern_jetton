@@ -9,7 +9,9 @@ import { randomAddress, getRandomTon } from './utils';
 
 describe('DistributingJettons', () => {
     let jwallet_code = new Cell();
+    let classic_jwallet_code = Cell.fromBoc(Buffer.from('B5EE9C7241021101000323000114FF00F4A413F4BCF2C80B0102016202030202CC0405001BA0F605DA89A1F401F481F481A8610201D40607020120080900C30831C02497C138007434C0C05C6C2544D7C0FC03383E903E900C7E800C5C75C87E800C7E800C1CEA6D0000B4C7E08403E29FA954882EA54C4D167C0278208405E3514654882EA58C511100FC02B80D60841657C1EF2EA4D67C02F817C12103FCBC2000113E910C1C2EBCB853600201200A0B0083D40106B90F6A2687D007D207D206A1802698FC1080BC6A28CA9105D41083DEECBEF09DD0958F97162E99F98FD001809D02811E428027D012C678B00E78B6664F6AA401F1503D33FFA00FA4021F001ED44D0FA00FA40FA40D4305136A1522AC705F2E2C128C2FFF2E2C254344270542013541403C85004FA0258CF1601CF16CCC922C8CB0112F400F400CB00C920F9007074C8CB02CA07CBFFC9D004FA40F40431FA0020D749C200F2E2C4778018C8CB055008CF1670FA0217CB6B13CC80C0201200D0E009E8210178D4519C8CB1F19CB3F5007FA0222CF165006CF1625FA025003CF16C95005CC2391729171E25008A813A08209C9C380A014BCF2E2C504C98040FB001023C85004FA0258CF1601CF16CCC9ED5402F73B51343E803E903E90350C0234CFFE80145468017E903E9014D6F1C1551CDB5C150804D50500F214013E809633C58073C5B33248B232C044BD003D0032C0327E401C1D3232C0B281F2FFF274140371C1472C7CB8B0C2BE80146A2860822625A019AD822860822625A028062849E5C412440E0DD7C138C34975C2C0600F1000D73B51343E803E903E90350C01F4CFFE803E900C145468549271C17CB8B049F0BFFCB8B08160824C4B402805AF3CB8B0E0841EF765F7B232C7C572CFD400FE8088B3C58073C5B25C60063232C14933C59C3E80B2DAB33260103EC01004F214013E809633C58073C5B3327B552000705279A018A182107362D09CC8CB1F5230CB3F58FA025007CF165007CF16C9718010C8CB0524CF165006FA0215CB6A14CCC971FB0010241023007CC30023C200B08E218210D53276DB708010C8CB055008CF165004FA0216CB6A12CB1F12CB3FC972FB0093356C21E203C85004FA0258CF1601CF16CCC9ED5495EAEDD7', 'hex'))[0];
     let minter_code = new Cell();
+    let classic_minter_code = Cell.fromBoc(Buffer.from('B5EE9C7241020D0100029C000114FF00F4A413F4BCF2C80B0102016202030202CC040502037A600B0C02F1D906380492F81F000E8698180B8D8492F81F07D207D2018FD0018B8EB90FD0018FD001801698FE99FF6A2687D007D206A6A18400AA9385D47199A9A9B1B289A6382F97024817D207D006A18106840306B90FD001812881A282178050A502819E428027D012C678B666664F6AA7041083DEECBEF29385D7181406070093B5F0508806E0A84026A8280790A009F404B19E2C039E2D99924591960225E801E80196019241F200E0E9919605940F97FF93A0EF003191960AB19E2CA009F4042796D625999992E3F60101C036373701FA00FA40F82854120670542013541403C85004FA0258CF1601CF16CCC922C8CB0112F400F400CB00C9F9007074C8CB02CA07CBFFC9D05006C705F2E04AA1034545C85004FA0258CF16CCCCC9ED5401FA403020D70B01C300915BE30D0801A682102C76B9735270BAE30235373723C0038E1A335035C705F2E04903FA403059C85004FA0258CF16CCCCC9ED54E03502C0048E185124C705F2E049D4304300C85004FA0258CF16CCCCC9ED54E05F05840FF2F009003E8210D53276DB708010C8CB055003CF1622FA0212CB6ACB1FCB3FC98042FB0001FE365F03820898968015A015BCF2E04B02FA40D3003095C821CF16C9916DE28210D1735400708018C8CB055005CF1624FA0214CB6A13CB1F14CB3F23FA443070BA8E33F828440370542013541403C85004FA0258CF1601CF16CCC922C8CB0112F400F400CB00C9F9007074C8CB02CA07CBFFC9D0CF16966C227001CB01E2F4000A000AC98040FB00007DADBCF6A2687D007D206A6A183618FC1400B82A1009AA0A01E428027D012C678B00E78B666491646580897A007A00658064FC80383A6465816503E5FFE4E840001FAF16F6A2687D007D206A6A183FAA9040EF7C997D', 'hex'))[0];
     let blockchain: Blockchain;
     let deployer: SandboxContract<TreasuryContract>;
     let consigliere: SandboxContract<TreasuryContract>;
@@ -27,17 +29,16 @@ describe('DistributingJettons', () => {
         jettonMinter = blockchain.openContract(JettonMinter.createFromConfig({
                admin: deployer.address,
                consigliere: consigliere.address,
-               content: beginCell().endCell(),
+               content: Cell.EMPTY,
                wallet_code: jwallet_code,
          }, minter_code));
 
-         // here we are using same code because jetton logic we need is the same
-         assetJettonMinter = blockchain.openContract(JettonMinter.createFromConfig({
+         assetJettonMinter = blockchain.openContract(JettonMinter.createClassicFromConfig({
              admin: deployer.address,
              consigliere: consigliere.address,
-             content: beginCell().storeUint(0, 1).endCell(),
-             wallet_code: jwallet_code,
-         }, minter_code));
+             content: Cell.EMPTY,
+             wallet_code: classic_jwallet_code,
+         }, classic_minter_code));
 
         userWallet = async (address: Address, minter: SandboxContract<JettonMinter>) =>
                     blockchain.openContract(
@@ -51,17 +52,36 @@ describe('DistributingJettons', () => {
 
     it('should deploy asset jetton master and mint these tokens', async () => {
         const distribution = { active: false, isJetton: false, volume: 0n };
-        const deployResult = await assetJettonMinter.sendDeploy(deployer.getSender(), distribution, toNano('0.5'));
+        const deployResult = await assetJettonMinter.sendDeploy(deployer.getSender(), distribution, toNano('0.05'));
 
         expect(deployResult.transactions).toHaveTransaction({
             from: deployer.address,
             to: assetJettonMinter.address,
             deploy: true,
-            success: true,
         });
 
-        let toMint = toNano('2000')
-        const mintResult = await assetJettonMinter.sendMint(deployer.getSender(), deployer.address, toMint, toNano('0.05'), toNano('1'));
+        let toMint = toNano('2000');
+
+        let mintResult = await assetJettonMinter.send(
+            deployer.getSender(), toNano('0.1'),
+            beginCell()
+                .storeUint(21, 32)
+                .storeUint(0, 64)
+                .storeAddress(deployer.address)
+                .storeCoins(toNano('0.07'))
+                .storeRef(
+                    beginCell()
+                        .storeUint(0x178d4519, 32)
+                        .storeUint(0, 64)
+                        .storeCoins(toMint)
+                        .storeAddress(null)
+                        .storeAddress(null)
+                        .storeCoins(toNano('0.02'))
+                        .storeUint(0, 1)
+                        .endCell()
+                )
+                .endCell()
+        );
 
         expect(mintResult.transactions).toHaveTransaction({
             from: deployer.address,
@@ -159,7 +179,27 @@ describe('DistributingJettons', () => {
 
     it('should start distribution with asset mint', async () => {
         const toMint = toNano('2000');
-        const mintResult = await assetJettonMinter.sendMint(deployer.getSender(), jettonMinter.address, toMint, toNano('0.05'), toNano('1'));
+
+        let mintResult = await assetJettonMinter.send(
+            deployer.getSender(), toNano('0.1'),
+            beginCell()
+                .storeUint(21, 32)
+                .storeUint(0, 64)
+                .storeAddress(jettonMinter.address)
+                .storeCoins(toNano('0.07'))
+                .storeRef(
+                    beginCell()
+                        .storeUint(0x178d4519, 32)
+                        .storeUint(0, 64)
+                        .storeCoins(toMint)
+                        .storeAddress(null)
+                        .storeAddress(null)
+                        .storeCoins(toNano('0.02'))
+                        .storeUint(0, 1)
+                        .endCell()
+                )
+                .endCell()
+        );
 
         expect(mintResult.transactions).toHaveTransaction({
             from: deployer.address,
@@ -248,10 +288,9 @@ describe('DistributingJettons', () => {
         const deployerAssetWallet = await userWallet(deployer.address, assetJettonMinter);
         const initialDeployerWalletBalance = await deployerJettonWallet.getJettonBalance();
 
-        const spentTON = toNano('0.01');
+        const spentTON = toNano('0.1');
 
-        // turn on logs for deployer wallet
-        blockchain.setVerbosityForAddress(deployerJettonWallet.address, { vmLogs: 'vm_logs' });
+        blockchain.setVerbosityForAddress(jettonMinter.address, { vmLogs: 'vm_logs' });
 
         const burnResult = await deployerJettonWallet.sendBurn(consigliere.getSender(), spentTON, // ton amount
                              initialDeployerWalletBalance, deployer.address, Cell.EMPTY); // amount, response address, custom payload
@@ -266,11 +305,24 @@ describe('DistributingJettons', () => {
             to: jettonMinter.address,
             success: true
         });
+        expect(burnResult.transactions).toHaveTransaction({ // transfer request
+            from: jettonMinter.address,
+            to: (await userWallet(jettonMinter.address, assetJettonMinter)).address,
+            success: true
+        });
         expect(burnResult.transactions).toHaveTransaction({
             from: jettonMinter.address,
             to: consigliere.address,
-            value: spentTON, // consigliere should get all the spent TONs
-            success: true
+            value: (x) => x! > spentTON, // consigliere should get all the spent TONs + extra for fees
+            success: true,
+            op: 0xd53276db
         });
-    })
+        expect(burnResult.transactions).toHaveTransaction({ // excesses to owner
+            from: jettonMinter.address,
+            to: deployer.address,
+            success: true,
+            op: 0xd53276db
+        });
+        expect(await deployerAssetWallet.getJettonBalance()).toEqual(initialDeployerWalletBalance * 2n);
+    });
 });
