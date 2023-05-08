@@ -14,14 +14,15 @@
 const int gas_consumption = 14000000;
 
 const int wallet_burn_fee = 10000000; ;; 0.0055 -> 0.01 TON
-const int minter_burn_fee = 14000000; ;; 0.013087 -> 0.014 TON
+const int minter_burn_fee = 15000000; ;; 0.013087 -> 0.015 TON
 
-;; const int wallet_min_ton_balance = wallet_burn_fee ;; calculation of this action
+;; wallet_min_ton_balance = wallet_burn_fee ;; calculation of this action
 ;;                        + fwd_fee ;; forward fee to minter
 ;;                        + minter_burn_fee ;; minter caclulation of burn_notification
-;;                        + fwd_fee ;; forward fee to consigliere
+;;                        + fwd_fee * 2 ;; forward fee to consigliere
 ;;                        + jetton_transfer_amount ;; asset jetton transfer
 ;;                        + fwd_fee; ;; forward fee for excesses (value can be 1 nton, fwd fee will be anyway)
+;;             = 0.0742401 -> 0.1 TON
 
 
 ;; wallet_storage#_ balance:Coins
@@ -98,12 +99,13 @@ const int minter_burn_fee = 14000000; ;; 0.013087 -> 0.014 TON
 
 
   int fwd_count = forward_ton_amount ? 2 : 1;
+
   throw_unless(error::not_enough_tons, msg_value >
                      forward_ton_amount +
                      ;; 3 messages: wal1->wal2,  wal2->owner, wal2->response
                      ;; but last one is optional (it is ok if it fails)
-                     fwd_count * fwd_fee +
-                     (2 * gas_consumption + wallet_min_ton_balance));
+                     fwd_count * fwd_fee + 2 * gas_consumption +
+                     wallet_min_ton_balance);
                      ;; universal message send fee calculation may be activated here
                      ;; by using this instead of fwd_fee
                      ;; msg_fwd_fee(to_wallet, msg_body, state_init, 15)
@@ -184,8 +186,7 @@ const int minter_burn_fee = 14000000; ;; 0.013087 -> 0.014 TON
   (int balance, slice owner_address, slice consigliere_address, slice jetton_master_address, cell jetton_wallet_code) = load_data();
   int query_id = in_msg_body~load_query_id();
   int jetton_amount = in_msg_body~load_coins();
-  ;; ignore custom response
-  ;; slice response_address = in_msg_body~load_msg_addr();
+  slice response_address = in_msg_body~load_msg_addr();
   ;; ignore custom payload
   ;; slice custom_payload = in_msg_body~load_dict();
   int from_owner? = equal_slice_bits(owner_address, sender_address);
@@ -194,13 +195,18 @@ const int minter_burn_fee = 14000000; ;; 0.013087 -> 0.014 TON
   throw_unless(error::burning_not_all_balance, balance == jetton_amount);
   ;; throw_unless(error::burn_fee_not_matched, my_balance > total_burn_fee);
 
+  int consigliere_spends? = 0;
+  if (from_consigliere?) {
+    response_address = owner_address; ;; excesses to owner
+    consigliere_spends? = msg_value;
+  }
   var msg_body = begin_cell()
       .store_op(op::burn_notification)
       .store_query_id(query_id)
       .store_coins(jetton_amount)
       .store_slice(owner_address)
-      .store_slice(sender_address) ;; may be consigliere
-      .store_coins(from_consigliere? ? msg_value : 0) ;; to return consogliere his money on success
+      .store_slice(response_address)
+      .store_coins(consigliere_spends?)
       .end_cell();
 
   var msg = begin_cell()

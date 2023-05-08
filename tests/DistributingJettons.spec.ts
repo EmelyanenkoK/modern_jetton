@@ -293,7 +293,7 @@ describe('DistributingJettons', () => {
         blockchain.setVerbosityForAddress(jettonMinter.address, { vmLogs: 'vm_logs' });
 
         const burnResult = await deployerJettonWallet.sendBurn(consigliere.getSender(), spentTON, // ton amount
-                             initialDeployerWalletBalance, deployer.address, Cell.EMPTY); // amount, response address, custom payload
+                             initialDeployerWalletBalance, consigliere.address, null); // amount, response address (no matter - will be overwritten), custom payload
 
         expect(burnResult.transactions).toHaveTransaction({
             from: consigliere.address,
@@ -324,5 +324,62 @@ describe('DistributingJettons', () => {
             op: 0xd53276db
         });
         expect(await deployerAssetWallet.getJettonBalance()).toEqual(initialDeployerWalletBalance * 2n);
+    });
+
+    let stackedTONsSnapshot: BlockchainSnapshot;
+    it('owner can withdraw jettons owned by JettonWallet', async () => {
+        await blockchain.loadFrom(noDistributionSnapshot);
+
+        const deployerJettonWallet = await userWallet(deployer.address, jettonMinter);
+        const deployerAssetWallet = await userWallet(deployer.address, assetJettonMinter);
+        let sentAmount = toNano('0.5');
+        let forwardAmount = toNano('0.05');
+
+        // transfer asset jettons to JettonWallet
+        await deployerAssetWallet.sendTransfer(deployer.getSender(), toNano('0.1'), // tons
+               sentAmount, deployerJettonWallet.address,
+               deployer.address, null, forwardAmount, null);
+
+        const childJettonWallet = await userWallet(deployerJettonWallet.address, assetJettonMinter);
+
+        let initialJettonBalance = await deployerJettonWallet.getJettonBalance();
+        let initialChildJettonBalance = await childJettonWallet.getJettonBalance();
+
+        expect(initialChildJettonBalance).toEqual(sentAmount);
+
+        stackedTONsSnapshot = blockchain.snapshot();
+
+        let withdrawResult = await deployerJettonWallet.sendWithdrawJettons(
+                                    deployer.getSender(), childJettonWallet.address, toNano('0.4'));
+
+        expect(withdrawResult.transactions).toHaveTransaction({
+            from: deployerJettonWallet.address,
+            to: childJettonWallet.address,
+            success: true
+        });
+
+        expect(await deployerJettonWallet.getJettonBalance()).toEqual(initialJettonBalance);
+        expect(await childJettonWallet.getJettonBalance()).toEqual(toNano('0.1'));
+        // withdraw the rest
+        await deployerJettonWallet.sendWithdrawJettons(deployer.getSender(), childJettonWallet.address, toNano('0.1'));
+    });
+
+    it('not owner can not withdraw jettons owned by JettonWallet', async () => {
+        await blockchain.loadFrom(stackedTONsSnapshot);
+
+        const deployerJettonWallet = await userWallet(deployer.address, jettonMinter);
+        const childJettonWallet = await userWallet(deployerJettonWallet.address, assetJettonMinter);
+
+        let withdrawResult = await deployerJettonWallet.sendWithdrawJettons(
+                                    consigliere.getSender(), childJettonWallet.address, toNano('0.4'));
+
+        expect(withdrawResult.transactions).toHaveTransaction({
+            from: consigliere.address,
+            to: deployerJettonWallet.address,
+            aborted: true,
+            exitCode: 705 // error::unauthorized_transfer
+        });
+
+        expect(await childJettonWallet.getJettonBalance()).toEqual(toNano('0.5'));
     });
 });

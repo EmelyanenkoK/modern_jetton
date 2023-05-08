@@ -29,16 +29,17 @@ const transferAction = async (provider: NetworkProvider, ui: UIProvider) => {
 
     const res = await wallet.sendTransfer(sender, toNano('0.05'),
                                           nanoAmount, toAddress,
-                                          sender.address!, Cell.EMPTY,
-                                          0n, Cell.EMPTY);
+                                          sender.address!, null,
+                                          0n, null);
     ui.write(`Transfer transaction sent`);
 }
 
 const burnAction = async (provider:NetworkProvider, ui:UIProvider, consigliere=false) => {
     const sender = provider.sender();
 
+    let ownerAddress = sender.address!;
     if (consigliere) {
-        let ownerAddress = await promptAddress(`Please specify address whose tokens are going to be burned`, ui, sender.address!);
+        ownerAddress = await promptAddress(`Please specify address whose tokens are going to be burned`, ui, sender.address!);
         wallet = provider.open(JettonWallet.createFromAddress(
                 await minter.getWalletAddress(ownerAddress)));
     }
@@ -55,8 +56,8 @@ const burnAction = async (provider:NetworkProvider, ui:UIProvider, consigliere=f
 
     await wallet.sendBurn(
         sender, toNano('0.1'),
-        burnAmount, sender.address!,
-        Cell.EMPTY
+        burnAmount, ownerAddress,
+        null
     );
 
     ui.write(`Burning transaction sent`);
