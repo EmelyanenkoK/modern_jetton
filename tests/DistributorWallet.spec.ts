@@ -6,6 +6,10 @@ import '@ton-community/test-utils';
 import { compile } from '@ton-community/blueprint';
 import { randomAddress, getRandomTon } from './utils';
 
+// TODO: 
+// 1. tests for share amount on burn
+// 2. tests for response on burn
+
 // jetton params
 let fwd_fee = 1780014n, gas_consumption = 14000000n, min_tons_for_storage = 100000000n;
 

@@ -14,7 +14,6 @@
 const int gas_consumption = 14000000;
 
 const int wallet_burn_fee = 10000000; ;; 0.0055 -> 0.01 TON
-const int minter_burn_fee = 15000000; ;; 0.013087 -> 0.015 TON
 
 ;; wallet_min_ton_balance = wallet_burn_fee ;; calculation of this action
 ;;                        + fwd_fee ;; forward fee to minter

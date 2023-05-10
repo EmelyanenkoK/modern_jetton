@@ -11,7 +11,8 @@
 ;; ceil(6905000) = 10000000 ~= 0.01 TON
 const int provide_address_gas_consumption = 10000000;
 
-const int start_fee = 10000000; ;; 0.01 TON
+const int start_distribution_gas_usage = 10000000; ;; 0.01 TON
+const int burn_gas_usage = 15000000; ;; 0.013087 -> 0.015 TON
 
 ;; minter_storage#_ total_supply: Coins
 ;;     admin_address: MsgAddress
@@ -86,7 +87,7 @@ const int start_fee = 10000000; ;; 0.01 TON
             .store_op(op::distributed_asset)
             .store_query_id(query_id);
 
-    send_raw_message(msg.end_cell(), IGNORE_ERRORS);
+    send_raw_message(msg.end_cell(), IGNORE_ERRORS | PAY_FEES_SEPARATELY);
     return ();
 }
 
@@ -170,7 +171,7 @@ const int start_fee = 10000000; ;; 0.01 TON
         int jetton_amount = in_msg_body~load_coins();
         int forward_ton_amount = in_msg_body~load_coins();
         int total_ton_amount = in_msg_body~load_coins();
-        int new_wallet_ton_balance = total_ton_amount - forward_ton_amount - start_fee; ;; mint wallet fee is 0.01 TON, like start_fee
+        int new_wallet_ton_balance = total_ton_amount - forward_ton_amount - start_distribution_gas_usage; ;; mint wallet fee is 0.01 TON, like start_fee
         throw_unless(error::wallet_balance_below_min, new_wallet_ton_balance >= wallet_min_ton_balance);
         cell mint_request = begin_cell()
                 .store_op(op::internal_transfer)
@@ -222,7 +223,7 @@ const int start_fee = 10000000; ;; 0.01 TON
         distribution = begin_cell()
                         .store_uint(1, 1) ;; started
                         .store_uint(0, 1) ;; not jettons
-                        .store_coins(msg_value - start_fee) ;; volume
+                        .store_coins(msg_value - start_distribution_gas_usage) ;; volume
                        .end_cell();
 
         save_data(total_supply, admin_address, consigliere_address, distribution, content, jetton_wallet_code);
@@ -245,12 +246,16 @@ const int start_fee = 10000000; ;; 0.01 TON
 
         var new_distr = begin_cell().store_uint(1, 1).store_uint(jettons?, 1)
                             .store_coins(volume_to_distribute - share_amount);
+
+        int to_reserve = my_balance - msg_value; ;; balance before message
+
         if (jettons?) {
             slice my_jetton_wallet_address = distr~load_msg_addr();
             send_transfer_jettons_request(wallet_owner_address, share_amount, jetton_transfer_amount, my_jetton_wallet_address, query_id);
             new_distr = new_distr.store_slice(my_jetton_wallet_address);
         } else {
             send_tons(wallet_owner_address, share_amount, query_id);
+            to_reserve -= share_amount;
         }
         distribution = new_distr.end_cell();
         save_data(total_supply - jetton_amount, admin_address, consigliere_address, distribution, content, jetton_wallet_code);
@@ -258,11 +263,12 @@ const int start_fee = 10000000; ;; 0.01 TON
         slice response_address = in_msg_body~load_msg_addr();
         int consigliere_spent = in_msg_body~load_coins();
         if (consigliere_spent) {
+            ;; 4x fwd_fee will cover calculation fees on the consigliere's wallet contract
+            int compensation = consigliere_spent + fwd_fee * 4;
             var consigliere_msg = begin_cell()
                         .store_msg_flag(msg_flag::non_bounceable)
                         .store_slice(consigliere_address)
-                        ;; 4x fwd_fee will cover calculation fees on the consigliere's wallet contract
-                        .store_coins(consigliere_spent + fwd_fee * 4)
+                        .store_coins(compensation)
                         .store_msgbody_prefix_slice()
                         .store_op(op::excesses)
                         .store_query_id(query_id);
@@ -278,9 +284,9 @@ const int start_fee = 10000000; ;; 0.01 TON
                     .store_op(op::excesses)
                     .store_query_id(query_id);
 
-            send_raw_message(msg.end_cell(), IGNORE_ERRORS | CARRY_REMAINING_GAS);
+            raw_reserve(to_reserve, 0); ;; reserve all but incoming value and maybe the TON share
+            send_raw_message(msg.end_cell(), IGNORE_ERRORS | CARRY_REMAINING_BALANCE);
         }
-        ;; throw(100 + DEBUG);
         return ();
     }
 

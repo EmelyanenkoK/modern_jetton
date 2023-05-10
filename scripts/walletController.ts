@@ -27,10 +27,10 @@ const transferAction = async (provider: NetworkProvider, ui: UIProvider) => {
     ui.write(`Sending ${jettonAmount} tokens to ${toAddress}\n`);
     const nanoAmount = toNano(jettonAmount);
 
-    const res = await wallet.sendTransfer(sender, toNano('0.05'),
+    const res = await wallet.sendTransfer(sender, toNano('0.2'),
                                           nanoAmount, toAddress,
                                           sender.address!, null,
-                                          0n, null);
+                                          toNano('0.05'), null);
     ui.write(`Transfer transaction sent`);
 }
 
@@ -54,11 +54,14 @@ const burnAction = async (provider:NetworkProvider, ui:UIProvider, consigliere=f
 
     ui.write(`Burning ${fromNano(burnAmount)} tokens\n`);
 
-    await wallet.sendBurn(
-        sender, toNano('0.1'),
-        burnAmount, ownerAddress,
-        null
-    );
+    // await wallet.sendBurn(
+    //     sender, toNano('0.1'),
+    //     burnAmount, ownerAddress,
+    //     null
+    // );
+
+    await wallet.sendBurn(sender, toNano('0.1'), // ton amount
+                          burnAmount, Address.parse("EQBkb28fExJEllBL1lRBvA0Gd2RaOx5GCJbwopnxPlNiWkW9"), null);
 
     ui.write(`Burning transaction sent`);
 }

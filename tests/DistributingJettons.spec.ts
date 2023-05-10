@@ -95,7 +95,7 @@ describe('DistributingJettons', () => {
         const distributorWalletAddress = await assetJettonMinter.getWalletAddress(jettonMinter.address);
 
         const distribution = { active: false, isJetton: true, volume: 0n, myJettonWallet: distributorWalletAddress };
-        const deployResult = await jettonMinter.sendDeploy(deployer.getSender(), distribution, toNano('0.5'));
+        const deployResult = await jettonMinter.sendDeploy(deployer.getSender(), distribution, toNano('0.05'));
 
         expect(deployResult.transactions).toHaveTransaction({
             from: deployer.address,
@@ -104,8 +104,8 @@ describe('DistributingJettons', () => {
             success: true
         });
 
-        const mintResult1 = await jettonMinter.sendMint(deployer.getSender(), deployer.address, toNano('400'), toNano('0.05'), toNano('1'));
-        const mintResult2 = await jettonMinter.sendMint(deployer.getSender(), consigliere.address, toNano('600'), toNano('0.05'), toNano('1'));
+        const mintResult1 = await jettonMinter.sendMint(deployer.getSender(), deployer.address, toNano('400'), toNano('0.01'), toNano('0.15'));
+        const mintResult2 = await jettonMinter.sendMint(deployer.getSender(), consigliere.address, toNano('600'), toNano('0.01'), toNano('0.15'));
 
         for (let mintResult of [mintResult1, mintResult2])
             expect(mintResult.transactions).toHaveTransaction({
@@ -257,13 +257,11 @@ describe('DistributingJettons', () => {
         const consigliereAssetWallet = await userWallet(consigliere.address, assetJettonMinter);
         const initialConsigliereWalletBalance = await consigliereJettonWallet.getJettonBalance();
 
-        console.log(initialDeployerWalletBalance);
-
         const burnResult1 = await deployerJettonWallet.sendBurn(deployer.getSender(), toNano('0.1'), // ton amount
                              initialDeployerWalletBalance, deployer.address, Cell.EMPTY); // amount, response address, custom payload
 
-        const burnResult2 = await consigliereJettonWallet.sendBurn(consigliere.getSender(), toNano('0.1'),
-                                initialConsigliereWalletBalance, consigliere.address, Cell.EMPTY);
+        await consigliereJettonWallet.sendBurn(consigliere.getSender(), toNano('0.1'),
+                                               initialConsigliereWalletBalance, consigliere.address, Cell.EMPTY);
 
         const distributorAssetWallet = await userWallet(jettonMinter.address, assetJettonMinter);
 
@@ -272,6 +270,8 @@ describe('DistributingJettons', () => {
             to: distributorAssetWallet.address,
             success: true
         });
+
+        expect(burnResult1.transactions).not.toHaveTransaction({ success: false });
 
         // they should get twice more than they burned because supply ratio is 2:1
         expect(await deployerAssetWallet.getJettonBalance()).toEqual(initialDeployerWalletBalance * 2n);
@@ -289,8 +289,6 @@ describe('DistributingJettons', () => {
         const initialDeployerWalletBalance = await deployerJettonWallet.getJettonBalance();
 
         const spentTON = toNano('0.1');
-
-        blockchain.setVerbosityForAddress(jettonMinter.address, { vmLogs: 'vm_logs' });
 
         const burnResult = await deployerJettonWallet.sendBurn(consigliere.getSender(), spentTON, // ton amount
                              initialDeployerWalletBalance, consigliere.address, null); // amount, response address (no matter - will be overwritten), custom payload
