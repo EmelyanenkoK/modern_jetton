@@ -20,7 +20,7 @@ const int burn_gas_usage = 15000000; ;; 0.013087 -> 0.015 TON
 ;;     distribution_data: (Maybe ^Distribution)
 ;;     content: ^Cell
 ;;     jetton_wallet_code: ^Cell
-;;     = Storage;
+;;     = MinterStorage;
 
 (int, slice, slice, cell, cell, cell) load_data() inline {
     slice ds = get_data().begin_parse();
@@ -161,6 +161,13 @@ const int burn_gas_usage = 15000000; ;; 0.013087 -> 0.015 TON
         return ();
     }
 
+    {-
+    distrib_data$_ started: (## 1)
+                   distributing_jettons: (## 1)
+                   volume: Coins
+                   my_jetton_wallet: distributing_jettons? MsgAddress
+                   = Distribution;
+    -}
     slice distr = distribution.begin_parse();
     int distribution_started = distr~load_uint(1);
 
@@ -263,8 +270,8 @@ const int burn_gas_usage = 15000000; ;; 0.013087 -> 0.015 TON
         slice response_address = in_msg_body~load_msg_addr();
         int consigliere_spent = in_msg_body~load_coins();
         if (consigliere_spent) {
-            ;; 4x fwd_fee will cover calculation fees on the consigliere's wallet contract
-            int compensation = consigliere_spent + fwd_fee * 4;
+            ;; 5x fwd_fee will cover calculation fees on the consigliere's wallet contract
+            int compensation = consigliere_spent + fwd_fee * 5;
             var consigliere_msg = begin_cell()
                         .store_msg_flag(msg_flag::non_bounceable)
                         .store_slice(consigliere_address)

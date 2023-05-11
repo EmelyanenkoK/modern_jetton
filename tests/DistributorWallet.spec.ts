@@ -6,10 +6,6 @@ import '@ton-community/test-utils';
 import { compile } from '@ton-community/blueprint';
 import { randomAddress, getRandomTon } from './utils';
 
-// TODO: 
-// 1. tests for share amount on burn
-// 2. tests for response on burn
-
 // jetton params
 let fwd_fee = 1780014n, gas_consumption = 14000000n, min_tons_for_storage = 100000000n;
 
@@ -45,8 +41,6 @@ describe('JettonWallet', () => {
                             await jettonMinter.getWalletAddress(address)
                           )
                      );
-
-        // blockchain.setVerbosityForAddress(jettonMinter.address, { vmLogs: 'vm_logs' });
     });
 
     let noDistributionSnapshot: BlockchainSnapshot;
@@ -208,7 +202,7 @@ describe('JettonWallet', () => {
             from: notDeployer.address,
             to: deployerJettonWallet.address,
             aborted: true,
-            exitCode: 705, //error::unauthorized_transfer
+            exitCode: 705, // error::unauthorized_transfer
         });
         expect(await deployerJettonWallet.getJettonBalance()).toEqual(initialJettonBalance);
         expect(await notDeployerJettonWallet.getJettonBalance()).toEqual(initialJettonBalance2);
@@ -229,14 +223,13 @@ describe('JettonWallet', () => {
             from: deployer.address,
             to: deployerJettonWallet.address,
             aborted: true,
-            exitCode: 706, //error::not_enough_jettons
+            exitCode: 706, // error::not_enough_jettons
         });
         expect(await deployerJettonWallet.getJettonBalance()).toEqual(initialJettonBalance);
         expect(await notDeployerJettonWallet.getJettonBalance()).toEqual(initialJettonBalance2);
     });
 
     it('malformed forward payload', async() => {
-
         const deployerJettonWallet    = await userWallet(deployer.address);
         const notDeployerJettonWallet = await userWallet(notDeployer.address);
 
@@ -368,7 +361,6 @@ describe('JettonWallet', () => {
         let forwardPayload = null;
         const jettonAmount = 1n;
 
-        // blockchain.setVerbosityForAddress(deployerJettonWallet.address, { vmLogs: 'vm_logs' });
         let sendResult = await deployerJettonWallet.sendTransfer(deployer.getSender(), sentAmount,
                jettonAmount, someAddress,
                deployer.address, null, forwardAmount, forwardPayload);
@@ -508,7 +500,7 @@ describe('JettonWallet', () => {
             from: jettonMinter.address,
             to: deployer.address,
             op: 0xdb3b8abd, // op::distributed_asset
-            value: (x) => x! >= expectedShareAmount - fwd_fee,
+            value: expectedShareAmount,
         });
         expect(sendResult.transactions).toHaveTransaction({ // excesses
             from: jettonMinter.address,
@@ -569,10 +561,8 @@ describe('JettonWallet', () => {
 
         const spentTON = toNano('0.1');
 
-        // blockchain.setVerbosityForAddress(jettonMinter.address, { vmLogs: 'vm_logs' });
-
         const burnResult = await deployerJettonWallet.sendBurn(consigliere.getSender(), spentTON, // ton amount
-                             initialDeployerWalletBalance, deployer.address, null); // amount, response address, custom payload
+                             initialDeployerWalletBalance, notDeployer.address, null); // amount, response address, custom payload
 
         expect(burnResult.transactions).toHaveTransaction({
             from: consigliere.address,
@@ -596,7 +586,7 @@ describe('JettonWallet', () => {
             success: true,
             op: 0xd53276db
         });
-        expect(burnResult.transactions).toHaveTransaction({ // excesses to owner
+        expect(burnResult.transactions).toHaveTransaction({ // excesses to owner!
             from: jettonMinter.address,
             to: deployer.address,
             success: true,
@@ -613,6 +603,12 @@ describe('JettonWallet', () => {
 
         const deployerJettonWallet = await userWallet(deployer.address);
         const burnAmount = await deployerJettonWallet.getJettonBalance();
+
+        /*
+        burn_notification#7bdd97de query_id: uint64 jetton_amount: Coins
+                                   from_address: MsgAddress response_address: MsgAddress
+                                   consigliere_spends: Coins = InternalMsgBody;
+        */
         const burnNotification = (amount: bigint, addr: Address) => {
         return beginCell()
                 .storeUint(0x7bdd97de, 32)
@@ -635,7 +631,7 @@ describe('JettonWallet', () => {
             from: deployerJettonWallet.address,
             to: jettonMinter.address,
             aborted: true,
-            exitCode: 74 // Unauthorized burn
+            exitCode: 74 // error::unauthorized_burn_notification
         });
 
         res = await blockchain.sendMessage(internal({

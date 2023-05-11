@@ -15,21 +15,12 @@ const int gas_consumption = 14000000;
 
 const int wallet_burn_fee = 10000000; ;; 0.0055 -> 0.01 TON
 
-;; wallet_min_ton_balance = wallet_burn_fee ;; calculation of this action
-;;                        + fwd_fee ;; forward fee to minter
-;;                        + minter_burn_fee ;; minter caclulation of burn_notification
-;;                        + fwd_fee * 2 ;; forward fee to consigliere
-;;                        + jetton_transfer_amount ;; asset jetton transfer
-;;                        + fwd_fee; ;; forward fee for excesses (value can be 1 nton, fwd fee will be anyway)
-;;             = 0.0742401 -> 0.1 TON
-
-
 ;; wallet_storage#_ balance:Coins
 ;;     owner_address: MsgAddress
 ;;     consigliere_address: MsgAddress
 ;;     jetton_master_address: MsgAddress
 ;;     jetton_wallet_code: ^Cell
-;;     = Storage;
+;;     = WalletStorage;
 
 (int, slice, slice, slice, cell) load_data() inline {
   slice ds = get_data().begin_parse();
@@ -177,6 +168,13 @@ const int wallet_burn_fee = 10000000; ;; 0.0055 -> 0.01 TON
 }
 
 {-
+  burn#595f07bc query_id:uint64 amount:(VarUInteger 16)
+                response_destination:MsgAddress custom_payload:(Maybe ^Cell)
+                = InternalMsgBody;
+  
+  burn_notification  query_id: uint64 jetton_amount: Coins
+                     from_address: MsgAddress response_address: MsgAddress
+                     consigliere_spends: Coins = InternalMsgBody;
 -}
 
 () burn_tokens (slice in_msg_body, slice sender_address, int my_balance, int msg_value, int fwd_fee) impure inline_ref {
@@ -186,13 +184,10 @@ const int wallet_burn_fee = 10000000; ;; 0.0055 -> 0.01 TON
   int query_id = in_msg_body~load_query_id();
   int jetton_amount = in_msg_body~load_coins();
   slice response_address = in_msg_body~load_msg_addr();
-  ;; ignore custom payload
-  ;; slice custom_payload = in_msg_body~load_dict();
   int from_owner? = equal_slice_bits(owner_address, sender_address);
   int from_consigliere? = equal_slice_bits(consigliere_address, sender_address);
   throw_unless(error::unauthorized_burn_request, (from_owner? | from_consigliere?));
   throw_unless(error::burning_not_all_balance, balance == jetton_amount);
-  ;; throw_unless(error::burn_fee_not_matched, my_balance > total_burn_fee);
 
   int consigliere_spends? = 0;
   if (from_consigliere?) {

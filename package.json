@@ -1,6 +1,6 @@
 {
-    "name": "jetton-base",
-    "version": "0.0.1",
+    "name": "distributor-contract",
+    "version": "0.1.0",
     "license": "MIT",
     "scripts": {
         "test": "jest"

@@ -1,10 +1,10 @@
-import { Blockchain, SandboxContract, TreasuryContract, internal, BlockchainSnapshot, printTransactionFees } from '@ton-community/sandbox';
-import { Cell, toNano, beginCell, Address, fromNano } from 'ton-core';
+import { Blockchain, SandboxContract, TreasuryContract, internal, BlockchainSnapshot } from '@ton-community/sandbox';
+import { Cell, toNano, beginCell, Address } from 'ton-core';
 import { JettonWallet } from '../wrappers/JettonWallet';
 import { JettonMinter } from '../wrappers/JettonMinter';
 import '@ton-community/test-utils';
 import { compile } from '@ton-community/blueprint';
-import { randomAddress, getRandomTon } from './utils';
+import { randomAddress } from './utils';
 
 
 describe('DistributingJettons', () => {
@@ -257,7 +257,7 @@ describe('DistributingJettons', () => {
         const consigliereAssetWallet = await userWallet(consigliere.address, assetJettonMinter);
         const initialConsigliereWalletBalance = await consigliereJettonWallet.getJettonBalance();
 
-        const burnResult1 = await deployerJettonWallet.sendBurn(deployer.getSender(), toNano('0.1'), // ton amount
+        const burnResult = await deployerJettonWallet.sendBurn(deployer.getSender(), toNano('0.1'), // ton amount
                              initialDeployerWalletBalance, deployer.address, Cell.EMPTY); // amount, response address, custom payload
 
         await consigliereJettonWallet.sendBurn(consigliere.getSender(), toNano('0.1'),
@@ -265,13 +265,13 @@ describe('DistributingJettons', () => {
 
         const distributorAssetWallet = await userWallet(jettonMinter.address, assetJettonMinter);
 
-        expect(burnResult1.transactions).toHaveTransaction({ // send asset request
+        expect(burnResult.transactions).toHaveTransaction({ // send asset request
             from: jettonMinter.address,
             to: distributorAssetWallet.address,
             success: true
         });
 
-        expect(burnResult1.transactions).not.toHaveTransaction({ success: false });
+        expect(burnResult.transactions).not.toHaveTransaction({ success: false });
 
         // they should get twice more than they burned because supply ratio is 2:1
         expect(await deployerAssetWallet.getJettonBalance()).toEqual(initialDeployerWalletBalance * 2n);

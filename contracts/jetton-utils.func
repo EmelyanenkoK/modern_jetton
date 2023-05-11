@@ -1,6 +1,16 @@
 #include "params.func";
 
 const int jetton_transfer_amount = 42000000; ;; 0.042 TON
+
+;; wallet_min_ton_balance = wallet_burn_fee
+;;                        + fwd_fee (to minter)
+;;                        + minter_burn_fee (burn_gas_usage)
+;;                        + fwd_fee * 5 (consigliere compensation)
+;;                        + fwd_fee (compensation sending)
+;;                        + jetton_transfer_amount (OR fwd_fee for asset delivery. keeping max)
+;;                        + fwd_fee; ;; forward fee for excesses (value can be 1 nton, fwd_fee will be anyway)
+;;             = 0.0812401 -> 0.1 TON
+
 const int wallet_min_ton_balance = 100000000; ;; 0.1 TON
 
 
