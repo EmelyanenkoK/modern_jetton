@@ -17,7 +17,7 @@ export const promptBool    = async (prompt:string, options:[string, string], ui:
 }
 
 export const promptAddress = async (prompt:string, provider:UIProvider, fallback?:Address) => {
-    let promptFinal = fallback ? prompt.replace(/:$/,'') + `(default:${fallback}):` : prompt ;
+    let promptFinal = fallback ? prompt.replace(/:$/,'') + ` (default: ${fallback}):` : prompt ;
     do {
         let testAddr = (await provider.input(promptFinal)).replace(/^\s+|\s+$/g,'');
         try{
@@ -31,10 +31,24 @@ export const promptAddress = async (prompt:string, provider:UIProvider, fallback
 
 };
 
-export const promptAmount = async (prompt:string, provider:UIProvider) => {
+export const waitForTransaction = async (provider:NetworkProvider, address:Address, lt:number, timeout:number) => {
+    for (let i = 0; i < 10; i++) {
+        let lastBlock = await provider.api().getLastBlock();
+        const lastTx = await provider.api().getTransaction(lastBlock.last.seqno, address, BigInt(lt));
+        if(lastTx.tx)
+            return true;
+        await sleep(timeout / 10);
+    }
+    return false;
+}
+
+export const promptAmount = async (prompt:string, provider:UIProvider, fallback?:number) => {
     let resAmount:number;
     do {
         let inputAmount = await provider.input(prompt);
+        if (inputAmount == "" && fallback) {
+            return fallback.toFixed(9);
+        }
         resAmount = Number(inputAmount);
         if(isNaN(resAmount)) {
             provider.write("Failed to convert " + inputAmount + " to float number");
@@ -43,22 +57,6 @@ export const promptAmount = async (prompt:string, provider:UIProvider) => {
             return resAmount.toFixed(9);
         }
     } while(true);
-}
-
-export const waitForTransaction = async (provider:NetworkProvider, address:Address, curTx:string | null, maxRetry:number, interval:number=1000) => {
-    let done  = false;
-    let count = 0;
-    const ui  = provider.ui();
-
-    do {
-        ui.write(`Awaiting transaction completion (${++count}/${maxRetry})`);
-        await sleep(interval);
-        const curState = await provider.api().getContractState(address);
-        if(curState.lastTransaction !== null){
-            done = curState.lastTransaction.lt !== curTx;
-        }
-    } while(!done && count < maxRetry);
-    return done;
 }
 
 export const displayContentCell = (content:Cell, ui:UIProvider) => {
