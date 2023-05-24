@@ -1,6 +1,6 @@
 #include "params.func";
 
-const int jetton_transfer_amount = 42000000; ;; 0.042 TON
+const int jetton_transfer_amount = 62000000; ;; 0.062 TON
 
 ;; wallet_min_ton_balance = wallet_burn_fee
 ;;                        + fwd_fee (to minter)
