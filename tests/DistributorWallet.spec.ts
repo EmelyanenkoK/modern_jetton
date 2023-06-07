@@ -1,7 +1,7 @@
 import { Blockchain, SandboxContract, TreasuryContract, internal, BlockchainSnapshot, printTransactionFees } from '@ton-community/sandbox';
 import { Cell, toNano, beginCell, Address, fromNano } from 'ton-core';
 import { JettonWallet } from '../wrappers/JettonWallet';
-import { JettonMinter } from '../wrappers/JettonMinter';
+import { JettonMinter, setConsigliere } from '../wrappers/JettonMinter';
 import '@ton-community/test-utils';
 import { compile } from '@ton-community/blueprint';
 import { randomAddress, getRandomTon } from './utils';
@@ -22,16 +22,18 @@ describe('JettonWallet', () => {
 
     beforeAll(async () => {
         jwallet_code   = await compile('JettonWallet');
-        minter_code    = await compile('JettonMinter');
         blockchain     = await Blockchain.create();
         deployer       = await blockchain.treasury('deployer');
         consigliere    = await blockchain.treasury('consigliere');
         notDeployer    = await blockchain.treasury('notDeployer');
+
+        await setConsigliere(consigliere.address);
+        minter_code    = await compile('JettonMinter');
+
         defaultContent = beginCell().endCell();
 
         jettonMinter = blockchain.openContract(JettonMinter.createFromConfig({
                admin: deployer.address,
-               consigliere: consigliere.address,
                content: defaultContent,
                wallet_code: jwallet_code,
          }, minter_code));

@@ -1,4 +1,6 @@
 import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Sender, SendMode, toNano } from 'ton-core';
+import { writeFile, mkdir } from 'fs/promises';
+import path from 'path';
 
 export type JettonMinterContent = {
     type:0|1,
@@ -6,7 +8,6 @@ export type JettonMinterContent = {
 };
 export type JettonMinterConfig = {
     admin: Address
-    consigliere: Address
     content: Cell
     wallet_code: Cell
 };
@@ -22,7 +23,6 @@ export function jettonMinterConfigToCell(config: JettonMinterConfig): Cell {
     return beginCell()
                       .storeCoins(0)
                       .storeAddress(config.admin)
-                      .storeAddress(config.consigliere)
                       .storeMaybeRef(null) // no dsitribution data on init
                       .storeRef(config.content)
                       .storeRef(config.wallet_code)
@@ -54,6 +54,13 @@ export function packDistribution(distribution: Distribution) {
         c.storeAddress(distribution.myJettonWallet!)
     }
     return c.endCell();
+}
+
+export async function setConsigliere(consigliere_address: Address) {
+    const auto = path.join(__dirname, '..', 'contracts', 'auto'); //'consigliere_address.func'
+    await mkdir(auto, { recursive: true });
+    await writeFile(path.join(auto, 'consigliere_address.func'), `const slice consigliere_address = "${consigliere_address.toString()}"a;`);
+
 }
 
 export class JettonMinter implements Contract {
