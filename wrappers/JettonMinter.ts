@@ -9,7 +9,7 @@ export type JettonMinterContent = {
 export type JettonMinterConfig = {
     admin: Address
     content: Cell
-    wallet_code: Cell
+    wallet_code?: Cell
 };
 
 export type Distribution = {
@@ -25,7 +25,6 @@ export function jettonMinterConfigToCell(config: JettonMinterConfig): Cell {
                       .storeAddress(config.admin)
                       .storeMaybeRef(null) // no dsitribution data on init
                       .storeRef(config.content)
-                      .storeRef(config.wallet_code)
            .endCell();
 }
 
@@ -34,7 +33,7 @@ export function jettonClassicMinterConfigToCell(config: JettonMinterConfig): Cel
         .storeCoins(0)
         .storeAddress(config.admin)
         .storeRef(config.content)
-        .storeRef(config.wallet_code)
+        .storeRef(config.wallet_code!)
     .endCell();
 }
 

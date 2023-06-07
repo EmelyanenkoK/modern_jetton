@@ -31,7 +31,6 @@ describe('DistributingJettons', () => {
         jettonMinter = blockchain.openContract(JettonMinter.createFromConfig({
                admin: deployer.address,
                content: Cell.EMPTY,
-               wallet_code: jwallet_code,
          }, minter_code));
 
          assetJettonMinter = blockchain.openContract(JettonMinter.createClassicFromConfig({

@@ -10,7 +10,9 @@ export const compile: CompilerConfig = {
         if (!fs.existsSync(consigliere_address)) {
           throw new Error('Consigliere address not defined in auto/consigliere_address.func, use setConsigliere');
         }
+        await compileFunc('JettonWallet');
     },
     targets: ['contracts/auto/consigliere_address.func',
+              'contracts/auto/jetton-wallet-code.func',
               'contracts/jetton-minter.func'],
 };

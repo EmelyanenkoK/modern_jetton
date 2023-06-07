@@ -35,7 +35,6 @@ describe('JettonWallet', () => {
         jettonMinter = blockchain.openContract(JettonMinter.createFromConfig({
                admin: deployer.address,
                content: defaultContent,
-               wallet_code: jwallet_code,
          }, minter_code));
 
         userWallet = async (address:Address) => blockchain.openContract(
