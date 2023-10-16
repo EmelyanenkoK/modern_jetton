@@ -1,6 +1,6 @@
-import { Address, OpenedContract, toNano } from 'ton-core';
+import { Address, OpenedContract, toNano } from '@ton/core';
 import { JettonMinter, JettonMinterContent, jettonContentToCell, jettonMinterConfigToCell } from '../wrappers/JettonMinter';
-import { compile, NetworkProvider, UIProvider} from '@ton-community/blueprint';
+import { compile, NetworkProvider, UIProvider} from '@ton/blueprint';
 import { promptAddress, promptBool, promptUrl } from '../wrappers/ui-utils';
 
 const formatUrl = "https://github.com/ton-blockchain/TEPs/blob/master/text/0064-token-data-standard.md#jetton-metadata-example-offchain";

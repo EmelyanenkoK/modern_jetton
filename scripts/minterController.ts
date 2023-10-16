@@ -1,5 +1,5 @@
-import { Address, beginCell, Cell, fromNano, OpenedContract, toNano } from 'ton-core';
-import { compile, sleep, NetworkProvider, UIProvider} from '@ton-community/blueprint';
+import { Address, beginCell, Cell, fromNano, OpenedContract, toNano } from '@ton/core';
+import { compile, sleep, NetworkProvider, UIProvider} from '@ton/blueprint';
 import { JettonMinter } from '../wrappers/JettonMinter';
 import { JettonWallet } from '../wrappers/JettonWallet';
 import { promptBool, promptAmount, promptAddress, displayContentCell, waitForTransaction } from '../wrappers/ui-utils';
