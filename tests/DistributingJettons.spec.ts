@@ -1,9 +1,9 @@
-import { Blockchain, SandboxContract, TreasuryContract, internal, BlockchainSnapshot } from '@ton-community/sandbox';
-import { Cell, toNano, beginCell, Address } from 'ton-core';
+import { Blockchain, SandboxContract, TreasuryContract, internal, BlockchainSnapshot } from '@ton/sandbox';
+import { Cell, toNano, beginCell, Address } from '@ton/core';
 import { JettonWallet } from '../wrappers/JettonWallet';
 import { JettonMinter, setConsigliere } from '../wrappers/JettonMinter';
-import '@ton-community/test-utils';
-import { compile } from '@ton-community/blueprint';
+import '@ton/test-utils';
+import { compile } from '@ton/blueprint';
 import { randomAddress } from './utils';
 
 
