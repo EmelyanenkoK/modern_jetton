@@ -1,5 +1,5 @@
-import { sleep, NetworkProvider, UIProvider} from '@ton-community/blueprint';
-import { Address, Cell } from "ton-core";
+import { sleep, NetworkProvider, UIProvider} from '@ton/blueprint';
+import { Address, Cell } from "@ton/core";
 
 export const promptBool    = async (prompt:string, options:[string, string], ui:UIProvider) => {
     let yes  = false;
@@ -53,9 +53,11 @@ export const waitForTransaction = async (provider:NetworkProvider, address:Addre
     do {
         ui.write(`Awaiting transaction completion (${++count}/${maxRetry})`);
         await sleep(interval);
-        const curState = await provider.api().getContractState(address);
-        if(curState.lastTransaction !== null){
-            done = curState.lastTransaction.lt !== curTx;
+
+        const curState = await provider.provider(address).getState()
+        
+        if(curState.last !== null){
+            done = curState.last.hash.toString() !== curTx 
         }
     } while(!done && count < maxRetry);
     return done;

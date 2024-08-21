@@ -1,5 +1,5 @@
-import { Address, beginCell, Cell, fromNano, OpenedContract, toNano } from 'ton-core';
-import { compile, sleep, NetworkProvider, UIProvider} from '@ton-community/blueprint';
+import { Address, beginCell, Cell, fromNano, OpenedContract, toNano } from '@ton/core';
+import { compile, sleep, NetworkProvider, UIProvider} from '@ton/blueprint';
 import { JettonMinter } from '../wrappers/JettonMinter';
 import { promptBool, promptAmount, promptAddress, displayContentCell, waitForTransaction } from '../wrappers/ui-utils';
 let minterContract:OpenedContract<JettonMinter>;
@@ -42,14 +42,14 @@ const changeAdminAction = async(provider:NetworkProvider, ui:UIProvider) => {
         }
     } while(retry);
 
-    const curState = await provider.api().getContractState(minterContract.address);
-    if(curState.lastTransaction === null)
+    const curState = await provider.provider(minterContract.address).getState();
+    if(curState.last === null)
         throw("Last transaction can't be null on deployed contract");
 
     await minterContract.sendChangeAdmin(provider.sender(), newAdmin);
     const transDone = await waitForTransaction(provider,
                                                minterContract.address,
-                                               curState.lastTransaction.lt,
+                                               curState.last.hash.toString(),
                                                10);
     if(transDone) {
         const adminAfter = await minterContract.getAdminAddress();
@@ -83,9 +83,9 @@ const mintAction = async (provider:NetworkProvider, ui:UIProvider) => {
     ui.write(`Minting ${mintAmount} to ${mintAddress}\n`);
     const supplyBefore = await minterContract.getTotalSupply();
     const nanoMint     = toNano(mintAmount);
-    const curState     = await provider.api().getContractState(minterContract.address);
-
-    if(curState.lastTransaction === null)
+    const curState     = await provider.provider(minterContract.address).getState();
+    
+    if(curState.last === null)
         throw("Last transaction can't be null on deployed contract");
 
     const res = await minterContract.sendMint(sender,
@@ -93,9 +93,10 @@ const mintAction = async (provider:NetworkProvider, ui:UIProvider) => {
                                               nanoMint,
                                               toNano('0.05'),
                                               toNano('0.1'));
+
     const gotTrans = await waitForTransaction(provider,
                                               minterContract.address,
-                                              curState.lastTransaction.lt,
+                                              curState.last.hash.toString(),
                                               10);
     if(gotTrans) {
         const supplyAfter = await minterContract.getTotalSupply();
@@ -125,13 +126,12 @@ export async function run(provider: NetworkProvider) {
     do {
         retry = false;
         minterAddress = await promptAddress('Please enter minter address:', ui);
-        const contractState = await api.getContractState(minterAddress);
-        if(contractState.state !== "active" || contractState.code == null) {
+        const contractState = await provider.provider(minterAddress).getState();
+        if (contractState.state.type != "active" || contractState.state.code == null) {
             retry = true;
             ui.write("This contract is not active!\nPlease use another address, or deploy it firs");
-        }
-        else {
-            const stateCode = Cell.fromBoc(contractState.code)[0];
+        } else {
+            const stateCode = Cell.fromBoc(contractState.state.code)[0];
             if(!stateCode.equals(minterCode)) {
                 ui.write("Contract code differs from the current contract version!\n");
                 const resp = await ui.choose("Use address anyway", ["Yes", "No"], (c) => c);

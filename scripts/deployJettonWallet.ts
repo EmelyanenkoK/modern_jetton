@@ -1,6 +1,6 @@
-import { toNano } from 'ton-core';
+import { toNano } from '@ton/core';
 import { JettonWallet } from '../wrappers/JettonWallet';
-import { compile, NetworkProvider } from '@ton-community/blueprint';
+import { compile, NetworkProvider } from '@ton/blueprint';
 
 export async function run(provider: NetworkProvider) {
     const jettonWallet = JettonWallet.createFromConfig({}, await compile('JettonWallet'));

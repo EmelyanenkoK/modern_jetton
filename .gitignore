@@ -2,3 +2,6 @@ node_modules
 temp
 build
 tags
+.env
+.idea
+example.json
